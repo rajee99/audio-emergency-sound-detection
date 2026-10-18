@@ -1,5 +1,13 @@
 clip_id,ytid,start_seconds,end_seconds,target_classes,multi_hot_labels,is_emergency,local_filepath,duration_sec,status,notes,feature_path,split
--11LhdJgBb8_30_40,-11LhdJgBb8,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-11LhdJgBb8_30_40.wav,10.0,available,,data/processed/features\-11LhdJgBb8_30_40_mel.pt,val
 -1LrH01Ei1w_30_40,-1LrH01Ei1w,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-1LrH01Ei1w_30_40.wav,10.0,available,,data/processed/features\-1LrH01Ei1w_30_40_mel.pt,val
--24dqQM_rDk_30_40,-24dqQM_rDk,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-24dqQM_rDk_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -24dqQM_rDk: This video is ),data/processed/features\-24dqQM_rDk_30_40_mel.pt,val
--4NLarMj4xU_30_40,-4NLarMj4xU,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-4NLarMj4xU_30_40.wav,10.0,available,,data/processed/features\-4NLarMj4xU_30_40_mel.pt,val
+-1TLtjPtnms_10_20,-1TLtjPtnms,10.0,20.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-1TLtjPtnms_10_20.wav,10.0,available,,data/processed/features\-1TLtjPtnms_10_20_mel.pt,val
+-5-vmt2iKT0_30_40,-5-vmt2iKT0,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5-vmt2iKT0_30_40.wav,10.0,available,,data/processed/features\-5-vmt2iKT0_30_40_mel.pt,val
+-5xOcMJpTUk_70_80,-5xOcMJpTUk,70.0,80.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5xOcMJpTUk_70_80.wav,10.0,available,,data/processed/features\-5xOcMJpTUk_70_80_mel.pt,val
+-70MzkgSsHQ_30_40,-70MzkgSsHQ,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-70MzkgSsHQ_30_40.wav,10.0,available,,data/processed/features\-70MzkgSsHQ_30_40_mel.pt,val
+-AswFDuOptQ_0_10,-AswFDuOptQ,0.0,10.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-AswFDuOptQ_0_10.wav,10.0,available,,data/processed/features\-AswFDuOptQ_0_10_mel.pt,val
+-C5dEU4zpJg_30_40,-C5dEU4zpJg,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-C5dEU4zpJg_30_40.wav,10.0,available,,data/processed/features\-C5dEU4zpJg_30_40_mel.pt,val
+-GREE8GdRrc_30_40,-GREE8GdRrc,30.0,40.0,gunshot,"0,0,0,0,0,0,1,0",1,data/raw/balanced_train\-GREE8GdRrc_30_40.wav,10.0,available,,data/processed/features\-GREE8GdRrc_30_40_mel.pt,val
+-yJk74Vfs2s_30_40,-yJk74Vfs2s,30.0,40.0,smash_crash,"0,0,0,0,1,0,0,0",1,data/raw/balanced_train\-yJk74Vfs2s_30_40.wav,10.0,available,,data/processed/features\-yJk74Vfs2s_30_40_mel.pt,val
+02rLonMSO9k_60_70,02rLonMSO9k,60.0,70.0,alarm,"0,0,1,0,0,0,0,0",1,data/raw/balanced_train\02rLonMSO9k_60_70.wav,10.0,available,,data/processed/features\02rLonMSO9k_60_70_mel.pt,val
+08U71rh7cDw_5_15,08U71rh7cDw,5.0,15.0,smash_crash,"0,0,0,0,1,0,0,0",1,data/raw/balanced_train\08U71rh7cDw_5_15.wav,9.2338125,available,,data/processed/features\08U71rh7cDw_5_15_mel.pt,val
+0HDoqcA727o_30_40,0HDoqcA727o,30.0,40.0,gunshot,"0,0,0,0,0,0,1,0",1,data/raw/balanced_train\0HDoqcA727o_30_40.wav,10.0,available,,data/processed/features\0HDoqcA727o_30_40_mel.pt,val

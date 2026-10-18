@@ -114,8 +114,8 @@ def evaluate_epoch(
     criterion: nn.Module,
     device: torch.device,
     threshold: float = 0.50,
-) -> Tuple[float, float, float, float]:
-    """Evaluate validation loss and F1/Precision/Recall scores."""
+) -> Tuple[float, float, float, float, float]:
+    """Evaluate validation loss, macro F1, micro F1, precision, and recall."""
     model.eval()
     running_loss = 0.0
     all_preds = []
@@ -138,47 +138,81 @@ def evaluate_epoch(
 
     val_loss = running_loss / max(1, len(dataloader.dataset))
     if not all_preds:
-        return val_loss, 0.0, 0.0, 0.0
+        return val_loss, 0.0, 0.0, 0.0, 0.0
 
     all_preds_arr = np.vstack(all_preds)
     all_targets_arr = np.vstack(all_targets)
 
     macro_f1 = float(f1_score(all_targets_arr, all_preds_arr, average="macro", zero_division=0))
+    micro_f1 = float(f1_score(all_targets_arr, all_preds_arr, average="micro", zero_division=0))
     precision = float(precision_score(all_targets_arr, all_preds_arr, average="macro", zero_division=0))
     recall = float(recall_score(all_targets_arr, all_preds_arr, average="macro", zero_division=0))
 
-    return val_loss, macro_f1, precision, recall
+    return val_loss, macro_f1, micro_f1, precision, recall
 
 
 def plot_training_history(
     history: Dict[str, List[float]],
     output_path: str = "reports/training_curves.png",
 ) -> None:
-    """Generate and save training/validation loss and F1 score curves."""
+    """Generate and save publication-quality 4-panel training/validation diagnostics."""
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    epochs = range(1, len(history["train_loss"]) + 1)
+    best_epoch = int(np.argmin(history["val_loss"])) + 1
+    min_val_loss = history["val_loss"][best_epoch - 1]
 
-    # Loss curve
-    ax1.plot(history["train_loss"], label="Train Loss", color="#1f77b4", linewidth=2)
-    ax1.plot(history["val_loss"], label="Val Loss", color="#ff7f0e", linewidth=2, linestyle="--")
-    ax1.set_title("BCE Loss vs Epoch")
+    plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    # Panel 1: BCE Loss curves
+    ax1 = axes[0, 0]
+    ax1.plot(epochs, history["train_loss"], label="Train BCE Loss", color="#1f77b4", linewidth=2.2)
+    ax1.plot(epochs, history["val_loss"], label="Val BCE Loss", color="#ff7f0e", linewidth=2.2, linestyle="--")
+    ax1.scatter([best_epoch], [min_val_loss], color="#d62728", s=100, zorder=5, label=f"Best Checkpoint (Ep {best_epoch}: {min_val_loss:.3f})")
+    ax1.set_title("A. Multi-Label BCE Loss Progression", fontsize=12, fontweight="bold")
     ax1.set_xlabel("Epoch")
     ax1.set_ylabel("Loss")
-    ax1.legend()
+    ax1.legend(loc="upper right", frameon=True)
     ax1.grid(True, alpha=0.3)
 
-    # Validation Macro F1 curve
-    ax2.plot(history["val_macro_f1"], label="Val Macro F1", color="#2ca02c", linewidth=2)
-    ax2.set_title("Validation Macro F1 Score")
+    # Panel 2: Macro & Micro F1 Scores
+    ax2 = axes[0, 1]
+    ax2.plot(epochs, history["val_macro_f1"], label="Val Macro F1", color="#2ca02c", linewidth=2.2)
+    ax2.plot(epochs, history["val_micro_f1"], label="Val Micro F1", color="#9467bd", linewidth=2.0, linestyle=":")
+    max_f1_idx = int(np.argmax(history["val_macro_f1"]))
+    max_f1 = history["val_macro_f1"][max_f1_idx]
+    ax2.scatter([max_f1_idx + 1], [max_f1], color="#2ca02c", s=100, zorder=5, label=f"Peak Macro F1 ({max_f1:.3f})")
+    ax2.set_title("B. Validation Classification F1-Score", fontsize=12, fontweight="bold")
     ax2.set_xlabel("Epoch")
-    ax2.set_ylabel("Macro F1")
-    ax2.legend()
+    ax2.set_ylabel("F1 Score")
+    ax2.legend(loc="lower right", frameon=True)
     ax2.grid(True, alpha=0.3)
 
+    # Panel 3: Precision vs Recall
+    ax3 = axes[1, 0]
+    ax3.plot(epochs, history["val_precision"], label="Val Macro Precision", color="#0284c7", linewidth=2.0)
+    ax3.plot(epochs, history["val_recall"], label="Val Macro Recall", color="#e11d48", linewidth=2.0, linestyle="--")
+    ax3.set_title("C. Validation Precision & Recall Trade-Off", fontsize=12, fontweight="bold")
+    ax3.set_xlabel("Epoch")
+    ax3.set_ylabel("Score")
+    ax3.legend(loc="lower right", frameon=True)
+    ax3.grid(True, alpha=0.3)
+
+    # Panel 4: Learning Rate Decay
+    ax4 = axes[1, 1]
+    ax4.plot(epochs, history["learning_rate"], label="Learning Rate (AdamW)", color="#d97706", linewidth=2.0)
+    ax4.set_title("D. Learning Rate Adaptation Schedule", fontsize=12, fontweight="bold")
+    ax4.set_xlabel("Epoch")
+    ax4.set_ylabel("Learning Rate")
+    ax4.set_yscale("log")
+    ax4.legend(loc="upper right", frameon=True)
+    ax4.grid(True, alpha=0.3)
+
+    plt.suptitle("CompactAudioCNN Model Training Diagnostics (AudioSet 2017)", fontsize=15, fontweight="bold", y=0.99)
     plt.tight_layout()
-    plt.savefig(output_path, dpi=200)
+    plt.savefig(output_path, dpi=250, bbox_inches="tight")
     plt.close()
-    print(f"Training curves saved to {output_path}")
+    print(f"Publication-grade training curves saved to {output_path}")
 
 
 def train_model(config_path: str = "configs/default.yaml") -> Dict[str, any]:
@@ -248,24 +282,41 @@ def train_model(config_path: str = "configs/default.yaml") -> Dict[str, any]:
 
     best_val_loss = float("inf")
     patience_counter = 0
-    history = {"train_loss": [], "val_loss": [], "val_macro_f1": []}
+    history = {
+        "train_loss": [],
+        "val_loss": [],
+        "val_macro_f1": [],
+        "val_micro_f1": [],
+        "val_precision": [],
+        "val_recall": [],
+        "learning_rate": [],
+    }
 
     print("\nStarting Training Loop...")
     for epoch in range(1, epochs + 1):
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_f1, val_prec, val_rec = evaluate_epoch(model, val_loader, criterion, device)
+        val_loss, val_macro_f1, val_micro_f1, val_prec, val_rec = evaluate_epoch(
+            model, val_loader, criterion, device
+        )
+        current_lr = optimizer.param_groups[0]["lr"]
         scheduler.step(val_loss)
 
-        history["train_loss"].append(train_loss)
-        history["val_loss"].append(val_loss)
-        history["val_macro_f1"].append(val_f1)
+        history["train_loss"].append(round(train_loss, 4))
+        history["val_loss"].append(round(val_loss, 4))
+        history["val_macro_f1"].append(round(val_macro_f1, 4))
+        history["val_micro_f1"].append(round(val_micro_f1, 4))
+        history["val_precision"].append(round(val_prec, 4))
+        history["val_recall"].append(round(val_rec, 4))
+        history["learning_rate"].append(current_lr)
 
         print(
             f"Epoch {epoch:02d}/{epochs:02d} | "
             f"Train Loss: {train_loss:.4f} | "
             f"Val Loss: {val_loss:.4f} | "
-            f"Val F1: {val_f1:.4f} | "
-            f"Prec: {val_prec:.4f} | Rec: {val_rec:.4f}"
+            f"Macro F1: {val_macro_f1:.4f} | "
+            f"Micro F1: {val_micro_f1:.4f} | "
+            f"Prec: {val_prec:.4f} | Rec: {val_rec:.4f} | "
+            f"LR: {current_lr:.6f}"
         )
 
         # Checkpoint best model
@@ -278,7 +329,8 @@ def train_model(config_path: str = "configs/default.yaml") -> Dict[str, any]:
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "val_loss": val_loss,
-                    "val_macro_f1": val_f1,
+                    "val_macro_f1": val_macro_f1,
+                    "val_micro_f1": val_micro_f1,
                     "class_names": class_names,
                     "config": cfg,
                 },
@@ -292,7 +344,11 @@ def train_model(config_path: str = "configs/default.yaml") -> Dict[str, any]:
                 break
 
     # Save training history and plot curves
-    plot_training_history(history, output_path=os.path.join(cfg["paths"]["reports_dir"], "training_curves.png"))
+    plot_training_history(
+        history, output_path=os.path.join(cfg["paths"]["reports_dir"], "training_curves.png")
+    )
+    with open(os.path.join(cfg["paths"]["reports_dir"], "training_history.json"), "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2)
 
     return {
         "best_checkpoint": best_checkpoint_path,

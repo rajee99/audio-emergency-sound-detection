@@ -1,5 +1,13 @@
 clip_id,ytid,start_seconds,end_seconds,target_classes,multi_hot_labels,is_emergency,local_filepath,duration_sec,status,notes,feature_path,split
 --PJHxphWEs_30_40,--PJHxphWEs,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--PJHxphWEs_30_40.wav,10.0,available,,data/processed/features\--PJHxphWEs_30_40_mel.pt,test
---aE2O5G5WE_0_10,--aE2O5G5WE,0.0,10.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--aE2O5G5WE_0_10.wav,10.0,available,,data/processed/features\--aE2O5G5WE_0_10_mel.pt,test
--30H9V1IKps_6_16,-30H9V1IKps,6.0,16.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-30H9V1IKps_6_16.wav,9.371625,available,,data/processed/features\-30H9V1IKps_6_16_mel.pt,test
--5-vmt2iKT0_30_40,-5-vmt2iKT0,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5-vmt2iKT0_30_40.wav,10.0,available,,data/processed/features\-5-vmt2iKT0_30_40_mel.pt,test
+-0DLPzsiXXE_30_40,-0DLPzsiXXE,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0DLPzsiXXE_30_40.wav,10.0,available,,data/processed/features\-0DLPzsiXXE_30_40_mel.pt,test
+-0FHUc78Gqo_30_40,-0FHUc78Gqo,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0FHUc78Gqo_30_40.wav,10.0,available,,data/processed/features\-0FHUc78Gqo_30_40_mel.pt,test
+-2hQKCE-oTI_30_40,-2hQKCE-oTI,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-2hQKCE-oTI_30_40.wav,10.0,available,,data/processed/features\-2hQKCE-oTI_30_40_mel.pt,test
+-6pcgdLfb_A_110_120,-6pcgdLfb_A,110.0,120.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-6pcgdLfb_A_110_120.wav,10.0,available,,data/processed/features\-6pcgdLfb_A_110_120_mel.pt,test
+-6x2PtSRfJU_30_40,-6x2PtSRfJU,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-6x2PtSRfJU_30_40.wav,10.0,available,,data/processed/features\-6x2PtSRfJU_30_40_mel.pt,test
+-7WpTk5AHfk_30_40,-7WpTk5AHfk,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-7WpTk5AHfk_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -7WpTk5AHfk: This video is ),data/processed/features\-7WpTk5AHfk_30_40_mel.pt,test
+-7ye24UFRng_0_10,-7ye24UFRng,0.0,10.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-7ye24UFRng_0_10.wav,10.0,available,,data/processed/features\-7ye24UFRng_0_10_mel.pt,test
+-8wQV7VJnmM_30_40,-8wQV7VJnmM,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-8wQV7VJnmM_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -8wQV7VJnmM: This video is ),data/processed/features\-8wQV7VJnmM_30_40_mel.pt,test
+-CniGkDLq-Y_30_40,-CniGkDLq-Y,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-CniGkDLq-Y_30_40.wav,10.0,available,,data/processed/features\-CniGkDLq-Y_30_40_mel.pt,test
+-cWrzrfVdMQ_250_260,-cWrzrfVdMQ,250.0,260.0,gunshot,"0,0,0,0,0,0,1,0",1,data/raw/balanced_train\-cWrzrfVdMQ_250_260.wav,10.0,available,,data/processed/features\-cWrzrfVdMQ_250_260_mel.pt,test
+03NLMEMi8-I_30_40,03NLMEMi8-I,30.0,40.0,siren,"0,1,0,0,0,0,0,0",1,data/raw/balanced_train\03NLMEMi8-I_30_40.wav,10.0,available,,data/processed/features\03NLMEMi8-I_30_40_mel.pt,test

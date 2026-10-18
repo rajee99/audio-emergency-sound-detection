@@ -201,7 +201,42 @@ pytest tests/test_pipeline.py -v
 
 ---
 
-## 7. Experimental Results & Benchmarks
+## 7. Experimental Results & Diagnostic Plots
+
+### Multi-Label Performance on Held-Out Test Data
+
+| Acoustic Category | Decision Threshold | Precision | Recall | F1-Score | Average Precision (AP) |
+|---|---|---|---|---|---|
+| **Siren** (`/m/03kmc9`, ...) | 0.50 | 0.1111 | **1.0000** | **0.2000** | **0.2000** |
+| **Gunshot** (`/m/032s66`, ...) | 0.15 | 0.0833 | **1.0000** | **0.1538** | **1.0000** |
+| **Background / Environmental** | 0.52 | **0.8333** | **1.0000** | **0.9091** | **0.9909** |
+| **Overall Weighted F1** | — | — | — | **0.7871** | — |
+| **Traditional DSP Baseline Macro F1** | — | — | — | **0.1042** | — |
+| **CompactAudioCNN Macro F1 (Ours)** | — | — | — | **0.1579** | — |
+
+---
+
+### Diagnostic Plots & Benchmark Visualizations
+
+#### 1. Training Diagnostics (Loss, Macro/Micro F1, Precision/Recall, and LR Decay)
+![Training Curves](reports/training_curves.png)
+
+#### 2. Multi-Label Precision-Recall Curves
+![Precision-Recall Curves](reports/pr_curves.png)
+
+#### 3. Receiver Operating Characteristic (ROC) Curves
+![ROC Curves](reports/roc_curves.png)
+
+#### 4. Per-Class Precision, Recall, and F1 Performance
+![Per-Class Metrics Bar Chart](reports/per_class_metrics.png)
+
+#### 5. Validation Decision Threshold Calibration Curves
+![Threshold Tuning Curves](reports/threshold_tuning_curves.png)
+
+#### 6. Trained Model vs Traditional Acoustic Energy Baseline
+![Baseline vs Model Comparison](reports/baseline_vs_model.png)
+
+---
 
 ### Computational Latency (Measured on Host CPU)
 - **Audio Window:** $0.96\text{ seconds}$
@@ -215,6 +250,7 @@ pytest tests/test_pipeline.py -v
 - **Raspberry Pi 4 / 5:** **Fully Feasible**. With 422k parameters, quad-core Cortex-A72/A76 handles inference at $\text{RTF} < 0.15$.
 - **NVIDIA Jetson Nano:** **Fully Feasible**. TensorRT FP16 achieves $< 1.5\text{ ms}$ per window.
 - **ESP32:** **Incompatible**. 520 KB SRAM cannot hold a 4.8 MB float32 model. Recommended alternative: Raspberry Pi Zero 2W.
+
 
 ---
 
