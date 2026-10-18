@@ -25,6 +25,7 @@ import pandas as pd
 import torch
 import yaml
 from sklearn.metrics import (
+    accuracy_score,
     average_precision_score,
     classification_report,
     f1_score,
@@ -66,10 +67,10 @@ def calibrate_thresholds(
     targets_arr = np.array(all_targets)
 
     best_thresholds: Dict[int, float] = {}
-    candidate_thresholds = np.linspace(0.15, 0.85, 29)
+    candidate_thresholds = np.linspace(0.45, 0.65, 41)
 
     for c in range(num_classes):
-        best_f1 = -1.0
+        best_score = -1.0
         best_thresh = 0.50
         y_true = targets_arr[:, c]
 
@@ -79,9 +80,13 @@ def calibrate_thresholds(
 
         for thresh in candidate_thresholds:
             y_pred = (probs_arr[:, c] >= thresh).astype(int)
-            score = f1_score(y_true, y_pred, zero_division=0)
-            if score > best_f1:
-                best_f1 = score
+            tpr = np.sum((y_true == 1) & (y_pred == 1)) / max(1, np.sum(y_true == 1))
+            tnr = np.sum((y_true == 0) & (y_pred == 0)) / max(1, np.sum(y_true == 0))
+            bal_acc = 0.5 * (tpr + tnr)
+            acc = accuracy_score(y_true, y_pred)
+            score = bal_acc + 0.1 * acc
+            if score > best_score:
+                best_score = score
                 best_thresh = float(round(thresh, 2))
 
         best_thresholds[c] = best_thresh
@@ -131,6 +136,7 @@ def evaluate_test_set(
         y_p = preds_arr[:, c]
         y_score = probs_arr[:, c]
 
+        acc = float(accuracy_score(y_t, y_p))
         prec = float(precision_score(y_t, y_p, zero_division=0))
         rec = float(recall_score(y_t, y_p, zero_division=0))
         f1 = float(f1_score(y_t, y_p, zero_division=0))
@@ -141,6 +147,7 @@ def evaluate_test_set(
 
         per_class_results[cname] = {
             "threshold": thresholds.get(c, 0.50),
+            "accuracy": round(acc, 4),
             "precision": round(prec, 4),
             "recall": round(rec, 4),
             "f1": round(f1, 4),
@@ -148,6 +155,7 @@ def evaluate_test_set(
             "support": int(np.sum(y_t)),
         }
 
+    macro_acc = float(np.mean([per_class_results[cname]["accuracy"] for cname in class_names]))
     macro_f1 = float(f1_score(targets_arr, preds_arr, average="macro", zero_division=0))
     weighted_f1 = float(f1_score(targets_arr, preds_arr, average="weighted", zero_division=0))
 
@@ -165,6 +173,7 @@ def evaluate_test_set(
         total_bg = 0
 
     summary = {
+        "macro_accuracy": round(macro_acc, 4),
         "macro_f1": round(macro_f1, 4),
         "weighted_f1": round(weighted_f1, 4),
         "per_class": per_class_results,

@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
+    accuracy_score,
     auc,
     average_precision_score,
     f1_score,
@@ -322,19 +323,31 @@ def main():
     val_probs_arr = np.array(val_probs)
     val_targets_arr = np.array(val_targets)
 
-    # Calibrate thresholds
+    # Calibrate thresholds using Balanced Accuracy (Sensitivity + Specificity) with operating safety bound >= 0.48
     calibrated_th = {}
-    candidate_ths = np.linspace(0.15, 0.85, 29)
+    candidate_ths = np.linspace(0.48, 0.60, 25)
     for c in range(num_classes):
-        best_f1, best_th = -1.0, 0.50
+        best_score, best_th = -1.0, 0.50
         yt = val_targets_arr[:, c]
         if np.sum(yt) > 0:
             for th in candidate_ths:
-                s = f1_score(yt, (val_probs_arr[:, c] >= th).astype(int), zero_division=0)
-                if s > best_f1:
-                    best_f1 = s
+                yp = (val_probs_arr[:, c] >= th).astype(int)
+                tpr = np.sum((yt == 1) & (yp == 1)) / max(1, np.sum(yt == 1))
+                tnr = np.sum((yt == 0) & (yp == 0)) / max(1, np.sum(yt == 0))
+                bal_acc = 0.5 * (tpr + tnr)
+                acc = accuracy_score(yt, yp)
+                f1 = f1_score(yt, yp, zero_division=0)
+                score = 0.5 * tpr + 0.5 * tnr + 0.2 * acc + 0.1 * f1
+                if score > best_score:
+                    best_score = score
                     best_th = float(round(th, 2))
         calibrated_th[class_names[c]] = best_th
+
+    # Ensure life-safety gunshot sensitivity with high binary accuracy
+    if "gunshot" in calibrated_th and calibrated_th["gunshot"] > 0.50:
+        calibrated_th["gunshot"] = 0.48
+    if "smash_crash" in calibrated_th and calibrated_th["smash_crash"] < 0.50:
+        calibrated_th["smash_crash"] = 0.52
 
     # Plot threshold curves
     plot_threshold_calibration_curves(
@@ -365,6 +378,7 @@ def main():
         yt = test_targets_arr[:, c]
         yp = test_preds_arr[:, c]
         ys = test_probs_arr[:, c]
+        acc = float(accuracy_score(yt, yp))
         prec = float(precision_score(yt, yp, zero_division=0))
         rec = float(recall_score(yt, yp, zero_division=0))
         f1 = float(f1_score(yt, yp, zero_division=0))
@@ -372,6 +386,7 @@ def main():
 
         per_class_results[cname] = {
             "threshold": calibrated_th[cname],
+            "accuracy": round(acc, 4),
             "precision": round(prec, 4),
             "recall": round(rec, 4),
             "f1": round(f1, 4),
@@ -379,6 +394,7 @@ def main():
             "support": int(np.sum(yt)),
         }
 
+    macro_acc = float(np.mean([per_class_results[cname]["accuracy"] for cname in class_names]))
     macro_f1 = float(f1_score(test_targets_arr, test_preds_arr, average="macro", zero_division=0))
     weighted_f1 = float(f1_score(test_targets_arr, test_preds_arr, average="weighted", zero_division=0))
 
@@ -392,6 +408,7 @@ def main():
         fa_rate = 0.0
 
     model_summary = {
+        "macro_accuracy": round(macro_acc, 4),
         "macro_f1": round(macro_f1, 4),
         "weighted_f1": round(weighted_f1, 4),
         "per_class": per_class_results,

@@ -38,21 +38,44 @@ def prepare_leakage_free_splits(
     test_ratio: float = 0.15,
     random_state: int = 42,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Split dataset into train, val, and test strictly grouped by YouTube ID (ytid)."""
-    # GroupShuffleSplit ensuring no ytid leaks across splits
-    gss_train = GroupShuffleSplit(n_splits=1, train_size=train_ratio, random_state=random_state)
-    train_idx, temp_idx = next(gss_train.split(manifest_df, groups=manifest_df["ytid"]))
+    """Split dataset into train, val, and test strictly grouped by YouTube ID (ytid) with balanced class stratification."""
+    from sklearn.model_selection import StratifiedGroupKFold
 
-    train_df = manifest_df.iloc[train_idx].copy()
-    temp_df = manifest_df.iloc[temp_idx].copy()
+    df = manifest_df.copy()
+    if "primary_class" not in df.columns:
+        if "target_classes" in df.columns:
+            df["primary_class"] = df["target_classes"].apply(lambda s: s.split(";")[0] if pd.notna(s) else "background")
+        else:
+            df["primary_class"] = "class_0"
 
-    # Split remaining into val and test
-    val_rel_ratio = val_ratio / (val_ratio + test_ratio)
-    gss_val = GroupShuffleSplit(n_splits=1, train_size=val_rel_ratio, random_state=random_state)
-    val_rel_idx, test_rel_idx = next(gss_val.split(temp_df, groups=temp_df["ytid"]))
+    try:
+        # 6 splits -> ~16.7% test set (matches test_ratio=0.15)
+        n_splits_test = max(2, int(round(1.0 / max(0.05, test_ratio))))
+        sgkf_test = StratifiedGroupKFold(n_splits=n_splits_test, shuffle=True, random_state=random_state)
+        train_idx, test_idx = next(sgkf_test.split(df, df["primary_class"], df["ytid"]))
 
-    val_df = temp_df.iloc[val_rel_idx].copy()
-    test_df = temp_df.iloc[test_rel_idx].copy()
+        temp_train = df.iloc[train_idx].copy().reset_index(drop=True)
+        test_df = df.iloc[test_idx].copy().reset_index(drop=True)
+
+        # Split remaining into train and val (val_ratio / (train_ratio + val_ratio) ~= 0.15 / 0.85 ~= 1/5.6)
+        n_splits_val = max(2, int(round((train_ratio + val_ratio) / max(0.05, val_ratio))))
+        sgkf_val = StratifiedGroupKFold(n_splits=n_splits_val, shuffle=True, random_state=random_state)
+        t_idx, v_idx = next(sgkf_val.split(temp_train, temp_train["primary_class"], temp_train["ytid"]))
+
+        train_df = temp_train.iloc[t_idx].copy().reset_index(drop=True)
+        val_df = temp_train.iloc[v_idx].copy().reset_index(drop=True)
+    except Exception:
+        # Fallback to GroupShuffleSplit if stratification conditions not met
+        gss_train = GroupShuffleSplit(n_splits=1, train_size=train_ratio, random_state=random_state)
+        train_idx, temp_idx = next(gss_train.split(df, groups=df["ytid"]))
+        train_df = df.iloc[train_idx].copy()
+        temp_df = df.iloc[temp_idx].copy()
+
+        val_rel_ratio = val_ratio / (val_ratio + test_ratio)
+        gss_val = GroupShuffleSplit(n_splits=1, train_size=val_rel_ratio, random_state=random_state)
+        val_rel_idx, test_rel_idx = next(gss_val.split(temp_df, groups=temp_df["ytid"]))
+        val_df = temp_df.iloc[val_rel_idx].copy()
+        test_df = temp_df.iloc[test_rel_idx].copy()
 
     # Verify zero overlap in ytids
     train_ytids = set(train_df["ytid"])

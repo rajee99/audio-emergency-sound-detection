@@ -67,21 +67,27 @@ class EnergySpectralBaseline:
         mean_centroid = float(np.mean(centroids)) if centroids else 0.0
         return peak_rms, mean_centroid
 
-    def predict(self, waveform: np.ndarray, num_classes: int = 8) -> np.ndarray:
+    def predict(self, waveform: np.ndarray, num_classes: int = 7) -> np.ndarray:
         """Heuristic baseline: if energy & centroid exceed threshold, trigger emergency classes."""
         peak_rms, centroid = self.extract_features(waveform)
         scores = np.zeros(num_classes, dtype=np.float32)
 
-        # Naive loud-sound detector: triggers gunshot/smash if high energy, siren/scream if high centroid
+        # 0: screaming, 1: alarm, 2: glass_shatter, 3: smash_crash, 4: explosion, 5: gunshot, 6: background
+        bg_idx = num_classes - 1
         if peak_rms > self.energy_threshold:
             if centroid > self.centroid_threshold:
-                scores[0] = 0.65  # Screaming
-                scores[1] = 0.60  # Siren
+                if num_classes > 0:
+                    scores[0] = 0.65  # Screaming
+                if num_classes > 1:
+                    scores[1] = 0.60  # Alarm
             else:
-                scores[6] = 0.70  # Gunshot
-                scores[4] = 0.60  # Smash / Crash
+                if num_classes > 5:
+                    scores[5] = 0.70  # Gunshot
+                if num_classes > 3:
+                    scores[3] = 0.60  # Smash / Crash
         else:
-            scores[7] = 0.85  # Background
+            if bg_idx >= 0 and bg_idx < num_classes:
+                scores[bg_idx] = 0.85  # Background
 
         return scores
 

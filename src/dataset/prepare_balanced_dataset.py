@@ -155,18 +155,32 @@ def build_enhanced_balanced_dataset(
                 duration = 10.0
                 err_msg = f"Acoustic prototype fallback ({msg[:50]})"
 
+        # Ensure mutually exclusive emergency vs background labeling:
+        # If any emergency sound is present, background is 0 and target_classes contains the emergency events.
+        # Only when NO emergency is present is background labeled 1.
+        is_emergency = int(any(c < (num_classes - 1) for c in assigned_indices))
+        if is_emergency:
+            clean_indices = [idx for idx in assigned_indices if idx < (num_classes - 1)]
+            clean_names = [class_names[idx] for idx in clean_indices]
+        else:
+            clean_indices = [num_classes - 1]
+            clean_names = ["background"]
+
         multi_hot = [0] * num_classes
-        for idx in assigned_indices:
+        for idx in clean_indices:
             multi_hot[idx] = 1
+
+        primary_class = clean_names[0]
 
         records.append({
             "clip_id": clip_id,
             "ytid": ytid,
             "start_seconds": start_sec,
             "end_seconds": end_sec,
-            "target_classes": ";".join(assigned_names),
+            "target_classes": ";".join(clean_names),
+            "primary_class": primary_class,
             "multi_hot_labels": ",".join(map(str, multi_hot)),
-            "is_emergency": int(any(c < (num_classes - 1) for c in assigned_indices)),
+            "is_emergency": is_emergency,
             "local_filepath": clip_path,
             "duration_sec": duration,
             "status": status,
