@@ -167,7 +167,7 @@ def compute_class_weights(df: pd.DataFrame, num_classes: int) -> List[float]:
 def main():
     parser = argparse.ArgumentParser(description="Preprocess audio and generate leakage-free dataset splits.")
     parser.add_argument("--config", default="configs/default.yaml", help="Path to config YAML")
-    parser.add_argument("--manifest", default="data/manifests/balanced_train_manifest.csv", help="Input manifest CSV")
+    parser.add_argument("--manifest", default="data/manifests/genuine_audioset_manifest.csv", help="Input manifest CSV")
     parser.add_argument("--features-dir", default="data/processed/features", help="Output directory for cached features")
     args = parser.parse_args()
 
@@ -176,8 +176,9 @@ def main():
     class_names = [c["name"] for c in cfg["classes"]["target_classes"]]
 
     manifest_df = pd.read_csv(args.manifest)
-    valid_df = manifest_df[manifest_df["status"].isin(["available", "synthetic_fallback"])].copy()
-    print(f"Loaded manifest with {len(valid_df)} valid audio clips.")
+    # Strictly genuine available audio clips (synthetic fallbacks isolated to tests only)
+    valid_df = manifest_df[manifest_df["status"] == "available"].copy()
+    print(f"Loaded manifest with {len(valid_df)} verified genuine AudioSet audio clips.")
 
     if len(valid_df) == 0:
         print("[ERROR] No valid audio clips found in manifest.", file=sys.stderr)

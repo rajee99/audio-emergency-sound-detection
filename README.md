@@ -77,145 +77,149 @@ Classes are grounded directly in the official [Google AudioSet Ontology](https:/
 
 ```
 d:/ml/fydp/
+├── backend/                        # FastAPI Backend & WebSocket Streaming Server
+│   └── main.py                     # /api/health, /api/model-info, /api/predict-file, /ws/live
+├── frontend/                       # Modern Dark-Themed Web Application (React + TypeScript + Vite)
+│   ├── src/
+│   │   ├── components/             # Visualizers (Oscilloscope, Spectrogram), Panels, Modals
+│   │   ├── services/api.ts         # REST & WebSocket service
+│   │   ├── App.tsx                 # Real-time Web Audio API streaming & state logic
+│   │   └── index.css               # Obsidian design system & glassmorphism styling
+│   └── package.json
 ├── configs/
-│   └── default.yaml                # System configuration, hyperparameters & thresholds
+│   └── default.yaml                # Standardized 7-class configuration (Siren excluded)
 ├── data/
-│   ├── metadata/                   # Official AudioSet ontology & segment CSVs
-│   ├── manifests/                  # Generated split manifests (train, val, test)
-│   ├── raw/                        # Extracted 10s 16 kHz WAV clips
-│   ├── processed/                  # Precomputed log-mel feature tensors (.pt)
-│   └── user_audio/                 # Drop folder for user-supplied permitted audio
+│   ├── manifests/
+│   │   ├── genuine_audioset_manifest.csv       # Verified genuine AudioSet clips (166 clips)
+│   │   └── synthetic_test_fixtures_manifest.csv # Isolated unit test fixtures
+│   ├── test_fixtures/synthetic/    # Isolated synthetic test fixtures (never used in model training)
+│   └── processed/                  # Cached log-mel feature tensors (.pt)
 ├── src/
 │   ├── dataset/
-│   │   ├── download_metadata.py    # Official AudioSet metadata retrieval
-│   │   ├── filter_labels.py        # Maps AudioSet MIDs to 8 target classes
-│   │   ├── acquire_audio.py        # YouTube stream downloader & audio slicer
-│   │   └── preprocess_audio.py     # Leakage-free split & feature caching
+│   │   ├── audit.py                # Dataset integrity auditor (checks clips & synthetic isolation)
+│   │   └── preprocess_audio.py     # Leakage-free StratifiedGroupKFold splits & feature extraction
 │   ├── models/
-│   │   ├── baseline.py             # Pretrained & DSP energy baseline
-│   │   └── classifier.py           # CompactAudioCNN & AudioMLP architectures
+│   │   └── classifier.py           # CompactAudioCNN architecture
 │   ├── training/
 │   │   ├── train.py                # Multi-label BCE training loop with pos_weight
-│   │   └── evaluate.py             # Evaluation & threshold calibration
+│   │   └── evaluate.py             # Evaluation & threshold calibration on held-out test split
 │   ├── inference/
-│   │   ├── stream_detector.py      # Real-time sliding window detection engine
-│   │   └── predict_file.py         # File-level prediction CLI
+│   │   ├── stream_detector.py      # Sliding-window inference, persistence & debounce engine
+│   │   └── predict_file.py         # Single file prediction CLI
 │   └── utils/
 │       └── audio_utils.py          # Audio loading, resampling, mel specs, augmentations
-├── app.py                          # Streamlit FYDP Interactive Web Dashboard
-├── benchmark_edge.py               # Latency, memory & edge feasibility benchmark
-├── tests/
-│   └── test_pipeline.py            # Unit & integration test suite (pytest)
-├── reports/                        # Evaluation metrics, training curves & benchmarks
-├── artifacts/                      # Model checkpoints & temporary files
-├── Emergency_Sound_Detection_Colab.ipynb # Ready-to-run Google Colab Notebook
-├── MODEL_CARD.md                   # Model card & ethics statement
-└── requirements.txt                # Dependency specification
+├── artifacts/
+│   └── best_emergency_model.pt     # Trained CompactAudioCNN checkpoint (4.87 MB)
+├── reports/
+│   └── evaluation_report.json      # Evaluation metrics, calibrated thresholds & test results
+└── tests/
+    ├── test_pipeline.py            # Audio processing & model unit tests
+    └── test_backend.py             # FastAPI REST & WebSocket test suite
 ```
 
 ---
 
-## 5. Quickstart & Installation
+## 5. Live Demonstration Web Application
 
-### Step 1: Clone and Set Up Environment
+The live demonstration runs as a modern, responsive web application connecting a browser-based frontend directly to the trained `CompactAudioCNN` model via a high-performance Python FastAPI WebSocket backend.
+
+### Architecture
+- **Frontend:** React 19 + TypeScript + Vite + Custom Obsidian Glassmorphism CSS.
+- **Backend:** Python + FastAPI + Uvicorn + WebSockets.
+- **Microphone Pipeline:** Browser Web Audio API (`navigator.mediaDevices.getUserMedia()`) capturing live Float32 PCM samples, resampled to 16 kHz in real time.
+- **Low-Latency Streaming:** Raw binary WebSocket frames sent every ~85 ms, sliding-window inference every 250 ms, measured latency $< 20\text{ ms}$.
+
+### How to Launch the Web Application
+
+#### Terminal 1 — Start the FastAPI Backend:
 ```bash
-git clone https://github.com/rajee99/audio-emergency-sound-detection.git
-cd audio-emergency-sound-detection
-
-# Create virtual environment (recommended)
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+# From repository root
+uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
+*Loads `artifacts/best_emergency_model.pt`, warms up the forward pass, and serves REST + WebSocket endpoints on port 8000.*
 
-*Note: On Windows, `imageio-ffmpeg` automatically provides the required static `ffmpeg` executable without requiring manual system PATH configuration.*
+#### Terminal 2 — Start the Vite Frontend:
+```bash
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+*Open `http://127.0.0.1:5173` in any modern web browser (Chrome, Edge, Firefox).*
+
+### Live Demonstration Features
+1. **Live Oscilloscope Waveform:** Real-time 60fps moving waveform from the browser microphone.
+2. **Rolling Thermal Spectrogram:** Scrolling 2D spectrogram with thermal Magma colormap (0–4 kHz) highlighting vocal distress and impulse acoustic bursts.
+3. **Dynamic 7-Class Prediction Bars:** Real-time confidence scores for Screaming, Alarm, Glass Shatter, Crash/Smash, Explosion, Gunshot, and Background.
+4. **Calibrated Threshold Markers:** Visual indicator pins calibrated on validation data to reject ambient false alarms.
+5. **Vocal Distress Alert Indicator:** Screaming is highlighted with a distinct indicator when model confidence exceeds the calibrated threshold.
+6. **Chronological Event Timeline:** Logs confirmed events with relative timestamps, durations, and scores.
+7. **Diagnostics Self-Test:** One-click modal verifying backend connectivity, model weights, audio context, and latency.
+8. **Controlled File Test Mode:** Independent mode to upload and classify prerecorded WAV files without microphone interference.
 
 ---
 
 ## 6. End-to-End Pipeline Execution
 
-### Step 1: Download Official AudioSet Metadata
-Downloads `ontology.json`, `class_labels_indices.csv`, `balanced_train_segments.csv`, and `eval_segments.csv`:
+### Step 1: Run Dataset Integrity Audit
 ```bash
-python src/dataset/download_metadata.py
+python -m src.dataset.audit
+```
+*Audits all 200 cataloged clips: verifies 166 genuine AudioSet clips on disk (zero missing, zero corrupted) and confirms that 34 synthetic fallback files are strictly isolated into `data/test_fixtures/synthetic/`.*
+
+### Step 2: Preprocess Audio & Create Leakage-Free Splits
+```bash
+python -m src.dataset.preprocess_audio
+```
+*Splits strictly genuine AudioSet data by `ytid` to guarantee zero data leakage (Train: 118, Val: 24, Test: 24 clips).*
+
+### Step 3: Train the Emergency Classifier
+```bash
+python -m src.training.train
+```
+*Trains `CompactAudioCNN` on genuine training clips. Val loss drops to 0.5824, Macro F1 reaches 0.4410.*
+
+### Step 4: Evaluate on Held-Out Test Data
+```bash
+python -m src.training.evaluate
+```
+*Evaluates the held-out test split, calibrates thresholds, and writes `reports/evaluation_report.json`.*
+
+### Step 5: Single-File Inference (CLI)
+```bash
+python -m src.inference.predict_file --audio data/test_fixtures/synthetic/synthetic_screaming_01.wav
 ```
 
-### Step 2: Filter Target Classes
-Filters segments containing target MIDs and generates multi-hot binary label vectors:
+### Step 6: Run Unit & Integration Tests
 ```bash
-# Small-subset mode for rapid development and testing (50 clips per class)
-python src/dataset/filter_labels.py --subset --max-per-class 50
+pytest tests/ -v
 ```
-
-### Step 3: Acquire Audio Clips
-Streams and slices exact 10-second segments via `yt-dlp` and `imageio-ffmpeg` at 16,000 Hz mono:
-```bash
-python src/dataset/acquire_audio.py --max-clips 40
-```
-*Missing or deleted YouTube clips are logged in the manifest and replaced with high-fidelity acoustic prototypes to guarantee 100% testability offline.*
-
-### Step 4: Preprocess Audio & Create Leakage-Free Splits
-Splits data strictly by YouTube Video ID (`ytid`) to prevent data leakage, caches log-mel spectrogram features, and calculates positive class weights:
-```bash
-python src/dataset/preprocess_audio.py
-```
-
-### Step 5: Train the Emergency Classifier
-Trains the `CompactAudioCNN` using class-imbalance weighted BCE loss, SpecAugment, and early stopping:
-```bash
-python src/training/train.py
-```
-*Saves best model weights to `artifacts/best_emergency_model.pt` and training curves to `reports/training_curves.png`.*
-
-### Step 6: Evaluate on Held-Out Test Data
-Calibrates per-class decision thresholds on validation data and evaluates the held-out test split:
-```bash
-python src/training/evaluate.py
-```
-
-### Step 7: Analyze Any Audio File (CLI)
-```bash
-python src/inference/predict_file.py --audio data/raw/test_sample/sample_gunshot.wav
-```
-
-### Step 8: Launch Interactive FYDP Web Demo
-```bash
-streamlit run app.py
-```
-
-### Step 9: Run Edge & Latency Benchmarks
-```bash
-python benchmark_edge.py
-```
-
-### Step 10: Run Unit & Integration Tests
-```bash
-pytest tests/test_pipeline.py -v
-```
+*Executes all 11 unit and integration tests across data processing, model architectures, backend endpoints, and WebSocket streaming.*
 
 ---
 
-## 7. Experimental Results & Diagnostic Plots
+## 7. Experimental Results on Held-Out AudioSet Test Data
 
-### Multi-Label Performance on Held-Out Test Data (Siren Excluded)
+Evaluation performed strictly on held-out AudioSet clips with zero synthetic data contamination:
 
-| Acoustic Category | Decision Threshold | Binary Accuracy | Precision | Recall | F1-Score | Average Precision (AP) |
+| Acoustic Category | Calibrated Threshold | Binary Accuracy | Precision | Recall | F1-Score | Average Precision (AP) |
 |---|---|---|---|---|---|---|
-| 🗣️ **Screaming** (`/m/03qc9zr`) | 0.50 | **89.66%** | 0.5000 | **1.0000** | **0.6667** | **0.6667** |
-| 💥 **Explosion** (`/m/014zdl`) | 0.59 | **86.21%** | 0.4286 | **1.0000** | **0.6000** | **1.0000** |
-| 🌳 **Background / Environmental** | 0.55 | **86.21%** | **1.0000** | 0.3333 | **0.5000** | **0.9762** |
-| 🚨 **Alarm** (`/m/07pp_mv`, ...) | 0.55 | **82.76%** | — | — | — | **0.4321** |
-| 🔫 **Gunshot** (`/m/032s66`, ...) | 0.48 | **79.31%** | 0.4444 | **0.8000** | **0.5714** | **0.8769** |
-| 🪟 **Glass Shatter** (`/m/07rn7sz`) | 0.52 | **79.31%** | — | — | — | **0.2359** |
-| 💥 **Smash / Crash** (`/m/07pjjrj`) | 0.52 | **72.41%** | — | — | — | **0.1955** |
-| **Macro Binary Accuracy** | — | **82.27%** | — | — | — | — |
-| **Overall Macro F1** | — | — | — | — | **0.3340** | — |
-| **Traditional DSP Baseline Macro F1** | — | — | — | — | **0.1058** | — |
+| 🚨 **Alarm** (`/m/07pp_mv`, ...) | 0.54 | **91.67%** | **1.0000** | 0.5000 | **0.6667** | **0.9167** |
+| 🗣️ **Screaming** (`/m/03qc9zr`) | 0.48 | **87.50%** | 0.5714 | **1.0000** | **0.7273** | **0.8042** |
+| 💥 **Crash / Smash** (`/m/07pjjrj`) | 0.50 | **87.50%** | 0.6667 | 0.5000 | **0.5714** | **0.6667** |
+| 🔫 **Gunshot** (`/m/032s66`, ...) | 0.50 | **83.33%** | — | — | — | 0.0833 |
+| 💣 **Explosion** (`/m/014zdl`) | 0.48 | **83.33%** | — | — | — | 0.1667 |
+| 🪟 **Glass Shatter** (`/m/07rn7sz`) | 0.49 | **75.00%** | — | — | — | 0.1250 |
+| 🌳 **Ambient / Background** | 0.48 | **70.83%** | 0.2857 | 0.5000 | **0.3636** | 0.3090 |
+| **Macro Binary Accuracy** | — | **82.74%** | — | — | — | — |
+| **False Alarm Rate on Ambient Audio** | — | **20.00%** | (80% specificity rejecting non-emergency ambient noise) |
+
+---
+
+## 8. Windows Audio & Microphone Troubleshooting
+
+- **Microphone Permissions:** In Windows Settings $\rightarrow$ Privacy & Security $\rightarrow$ Microphone, ensure "Microphone access" and "Let desktop apps access your microphone" are set to **On**.
+- **Browser Permission:** Click the lock or tune icon in the browser address bar next to `http://127.0.0.1:5173` and allow Microphone access.
+- **Audio Sample Rates:** The web application natively queries the hardware sample rate and resamples on-the-fly to 16,000 Hz, eliminating driver mismatch errors.
 
 ---
 

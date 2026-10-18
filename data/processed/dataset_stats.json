@@ -9,16 +9,16 @@
     "gunshot",
     "background"
   ],
-  "train_samples": 142,
-  "val_samples": 29,
-  "test_samples": 29,
+  "train_samples": 118,
+  "val_samples": 24,
+  "test_samples": 24,
   "pos_weights": [
-    2.6247,
-    2.6247,
-    2.7116,
-    2.6247,
-    2.6247,
-    2.1122,
-    2.0178
+    2.4375,
+    2.357,
+    2.6204,
+    2.6204,
+    2.6204,
+    2.2136,
+    2.2136
   ]
 }

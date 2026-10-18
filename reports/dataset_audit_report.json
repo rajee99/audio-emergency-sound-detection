@@ -1,0 +1,88 @@
+{
+  "dataset_name": "AudioSet 2017 Emergency Detection Subset",
+  "configured_classes": [
+    "screaming",
+    "alarm",
+    "glass_shatter",
+    "smash_crash",
+    "explosion",
+    "gunshot",
+    "background"
+  ],
+  "num_classes": 7,
+  "total_clips_cataloged": 200,
+  "retrieval_status": {
+    "genuine_available_audio": 166,
+    "synthetic_fallback_fixtures": 34,
+    "missing_audio_files": 0,
+    "corrupted_audio_files": 0
+  },
+  "genuine_per_class_representation": {
+    "screaming": 25,
+    "alarm": 25,
+    "glass_shatter": 21,
+    "smash_crash": 21,
+    "explosion": 21,
+    "gunshot": 26,
+    "background": 29
+  },
+  "splits_integrity": {
+    "train": {
+      "total_samples": 118,
+      "genuine_samples": 118,
+      "synthetic_samples": 0,
+      "unique_ytids": 118,
+      "per_class": {
+        "screaming": 17,
+        "alarm": 18,
+        "glass_shatter": 15,
+        "smash_crash": 15,
+        "explosion": 15,
+        "gunshot": 20,
+        "background": 20
+      }
+    },
+    "val": {
+      "total_samples": 24,
+      "genuine_samples": 24,
+      "synthetic_samples": 0,
+      "unique_ytids": 24,
+      "per_class": {
+        "screaming": 4,
+        "alarm": 4,
+        "glass_shatter": 3,
+        "smash_crash": 3,
+        "explosion": 3,
+        "gunshot": 3,
+        "background": 4
+      }
+    },
+    "test": {
+      "total_samples": 24,
+      "genuine_samples": 24,
+      "synthetic_samples": 0,
+      "unique_ytids": 24,
+      "per_class": {
+        "screaming": 4,
+        "alarm": 3,
+        "glass_shatter": 3,
+        "smash_crash": 3,
+        "explosion": 3,
+        "gunshot": 3,
+        "background": 5
+      }
+    }
+  },
+  "leakage_verification": {
+    "train_val": 0,
+    "train_test": 0,
+    "val_test": 0
+  },
+  "feature_cache_alignment": {
+    "missing_feature_tensors": 0,
+    "feature_tensors_dir": "D:\\ml\\fydp\\data\\processed\\features"
+  },
+  "label_hygiene": {
+    "conflicting_emergency_and_background_clips": 0
+  }
+}

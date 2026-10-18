@@ -18,3 +18,7 @@ artifacts/temp_upload.wav
 # IDE
 .vscode/
 .idea/
+
+# Node / Vite Frontend
+frontend/node_modules/
+frontend/dist/
