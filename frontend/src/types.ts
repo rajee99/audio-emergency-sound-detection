@@ -16,6 +16,12 @@ export interface ModelInfo {
   hop_duration_sec: number;
   evaluation_metrics?: Record<string, any>;
   test_size_disclosure?: string;
+  silence_gate?: {
+    enabled: boolean;
+    threshold_rms: number;
+    threshold_peak: number;
+    sustained_frames: number;
+  };
 }
 
 export interface AlertData {
@@ -25,6 +31,7 @@ export interface AlertData {
   persistence_count?: number;
   timestamp: number;
   message: string;
+  trigger_reason?: string;
 }
 
 export interface PersistenceClassState {
@@ -34,7 +41,7 @@ export interface PersistenceClassState {
 }
 
 export interface LivePredictionMessage {
-  type: 'prediction' | 'error' | 'reset_ack' | 'config_ack';
+  type: 'prediction' | 'error' | 'reset_ack' | 'config_ack' | 'silence_gate_ack';
   timestamp?: number;
   raw_scores?: Record<string, number>;
   scores?: Record<string, number>; // Smoothed
@@ -50,6 +57,10 @@ export interface LivePredictionMessage {
   alert?: AlertData | null;
   inference_latency_ms?: number;
   rms?: number;
+  peak?: number;
+  is_silence_gated?: boolean;
+  gate_reason?: string;
+  silence_threshold_rms?: number;
   buffer_samples?: number;
   message?: string;
 }
@@ -63,6 +74,7 @@ export interface TimelineEvent {
   threshold: number;
   timeString: string;
   isEmergency: boolean;
+  triggerReason?: string;
 }
 
 export interface FilePredictionWindow {
@@ -73,12 +85,19 @@ export interface FilePredictionWindow {
   persistence_counts?: Record<string, number>;
   detected_classes: string[];
   emergency_score: number;
+  rms?: number;
+  peak?: number;
+  is_silence_gated?: boolean;
+  gate_reason?: string;
 }
 
 export interface FilePredictResponse {
   filename: string;
   duration_sec: number;
   total_windows_processed: number;
+  silence_gated_windows?: number;
+  silence_gate_enabled?: boolean;
+  silence_threshold_rms?: number;
   max_emergency_score: number;
   overall_detected_events: string[];
   alerts_emitted: Array<{
@@ -88,6 +107,8 @@ export interface FilePredictResponse {
     detection_threshold: number;
     persistence_count?: number;
     message: string;
+    trigger_reason?: string;
   }>;
   window_predictions: FilePredictionWindow[];
 }
+

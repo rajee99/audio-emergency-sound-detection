@@ -11,6 +11,8 @@ interface ClassificationPanelProps {
   topClass: string;
   isScreamingScoreHigh: boolean;
   isScreamingAlert: boolean;
+  isSilenceGated?: boolean;
+  gateReason?: string;
 }
 
 const CLASS_ICONS: Record<string, string> = {
@@ -32,6 +34,8 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
   topClass,
   isScreamingScoreHigh,
   isScreamingAlert,
+  isSilenceGated = false,
+  gateReason,
 }) => {
   return (
     <div className="glass-panel classification-card">
@@ -46,7 +50,26 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
         </div>
       </div>
 
+      {/* Silence Gating Status Banner */}
+      {isSilenceGated && (
+        <div className="mb-3 p-2.5 rounded-lg bg-slate-900/95 border border-cyan-500/30 text-[11px] text-slate-300 flex items-start gap-2 shadow-inner">
+          <span className="text-base leading-none">🔇</span>
+          <div className="flex flex-col gap-0.5">
+            <div className="font-semibold text-cyan-300 flex items-center gap-1.5">
+              <span>Silence Gating Active</span>
+              <span className="text-[10px] font-mono text-cyan-400/80 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40">
+                TEMPORAL STATE RESET
+              </span>
+            </div>
+            <div className="text-slate-400 text-[10.5px]">
+              {gateReason || 'Sustained near-silence detected. Emergency scores suppressed and persistence counters held at 0.'}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2.5">
+
         {classes.map((cls) => {
           const smoothedScore = scores[cls.name] ?? 0.0;
           const rawScore = rawScores[cls.name] ?? smoothedScore;

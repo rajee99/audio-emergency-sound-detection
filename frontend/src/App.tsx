@@ -43,6 +43,10 @@ export const App: React.FC = () => {
   const [isScreamingAlert, setIsScreamingAlert] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(0);
   const [rms, setRms] = useState<number>(0);
+  const [peak, setPeak] = useState<number>(0);
+  const [isSilenceGated, setIsSilenceGated] = useState<boolean>(false);
+  const [gateReason, setGateReason] = useState<string>('');
+  const [silenceThresholdRms, setSilenceThresholdRms] = useState<number>(0.004);
 
   // Alerts & Timeline
   const [activeAlert, setActiveAlert] = useState<AlertData | null>(null);
@@ -64,6 +68,7 @@ export const App: React.FC = () => {
   const socketRef = useRef<WebSocket | null>(null);
   const monitoringTimerRef = useRef<number | null>(null);
   const lastAlertTimestampRef = useRef<number>(0);
+  const lastFrontendLogRef = useRef<number>(0);
 
   // Fetch initial model metadata and check backend connectivity
   useEffect(() => {
@@ -147,6 +152,10 @@ export const App: React.FC = () => {
     setActiveAlert(null);
     setIsScreamingScoreHigh(false);
     setIsScreamingAlert(false);
+    setIsSilenceGated(false);
+    setGateReason('');
+    setRms(0);
+    setPeak(0);
 
     if (workletNodeRef.current) {
       workletNodeRef.current.disconnect();
@@ -220,7 +229,27 @@ export const App: React.FC = () => {
         if (ws.readyState === WebSocket.OPEN) {
           const resampled16k = resampler.process(rawPcm);
           if (resampled16k.length > 0) {
-            ws.send(resampled16k.buffer as ArrayBuffer);
+            ws.send(resampled16k.buffer.slice(resampled16k.byteOffset, resampled16k.byteOffset + resampled16k.byteLength) as ArrayBuffer);
+          }
+
+          // Input metrics calculation & diagnostic logging
+          let sumSq = 0;
+          let maxAmp = 0;
+          for (let i = 0; i < rawPcm.length; i++) {
+            const abs = Math.abs(rawPcm[i]);
+            sumSq += abs * abs;
+            if (abs > maxAmp) maxAmp = abs;
+          }
+          const chunkRms = Math.sqrt(sumSq / rawPcm.length);
+          const now = performance.now();
+          if (now - lastFrontendLogRef.current >= 2000) {
+            lastFrontendLogRef.current = now;
+            const dbfs = chunkRms > 0 ? (20 * Math.log10(chunkRms)).toFixed(1) : '-∞';
+            console.log(
+              `[MIC INGEST] HW: ${audioCtx.sampleRate}Hz -> 16000Hz | ` +
+              `Chunk: ${rawPcm.length} -> ${resampled16k.length} samples | ` +
+              `RMS: ${chunkRms.toFixed(5)} (${dbfs} dBFS) | Peak: ${maxAmp.toFixed(5)}`
+            );
           }
         }
       };
@@ -274,6 +303,10 @@ export const App: React.FC = () => {
             if (msg.top_class) setTopClass(msg.top_class);
             if (msg.inference_latency_ms) setLatencyMs(msg.inference_latency_ms);
             if (msg.rms !== undefined) setRms(msg.rms);
+            if (msg.peak !== undefined) setPeak(msg.peak);
+            if (msg.is_silence_gated !== undefined) setIsSilenceGated(msg.is_silence_gated);
+            if (msg.gate_reason) setGateReason(msg.gate_reason);
+            if (msg.silence_threshold_rms !== undefined) setSilenceThresholdRms(msg.silence_threshold_rms);
 
             // Explicit Screaming Distinction
             if (msg.is_screaming_score_high !== undefined) {
@@ -303,6 +336,7 @@ export const App: React.FC = () => {
                   threshold: alertObj.threshold,
                   timeString: new Date().toLocaleTimeString(),
                   isEmergency: true,
+                  triggerReason: alertObj.trigger_reason,
                 };
                 setTimelineEvents((prev) => [newEvt, ...prev].slice(0, 50));
               }
@@ -312,6 +346,7 @@ export const App: React.FC = () => {
           console.warn('WS message parse error:', e);
         }
       };
+
 
       ws.onerror = (e) => {
         console.error('WebSocket live streaming error:', e);
@@ -454,18 +489,50 @@ export const App: React.FC = () => {
               isMonitoring={isMonitoring}
             />
 
-            {/* Audio RMS Level Meter */}
-            <div className="level-meter-wrapper">
-              <span className="level-meter-label">INPUT LEVEL</span>
+            {/* Audio RMS Level Meter & Gating Diagnostics */}
+            <div className="level-meter-wrapper flex flex-col gap-1.5 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="level-meter-label font-bold text-xs tracking-wider">INPUT LEVEL</span>
+                  {isMonitoring && (
+                    isSilenceGated ? (
+                      <span className="text-[10px] bg-slate-800 text-cyan-300 border border-cyan-800/60 px-2 py-0.5 rounded font-mono font-semibold flex items-center gap-1 shadow-sm">
+                        🔇 SILENCE GATE ACTIVE
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-700/60 px-2 py-0.5 rounded font-mono font-semibold flex items-center gap-1">
+                        🟢 AUDIO DETECTED
+                      </span>
+                    )
+                  )}
+                </div>
+                <div className="font-mono text-[11px] text-slate-400 flex items-center gap-3">
+                  <span title="Window Root Mean Square energy">
+                    RMS: {isMonitoring ? `${(rms * 100).toFixed(2)}%` : '0.00%'} ({isMonitoring && rms > 0 ? `${(20 * Math.log10(rms)).toFixed(1)} dBFS` : '-∞ dBFS'})
+                  </span>
+                  <span title="Window Maximum Absolute Peak">
+                    Peak: {isMonitoring ? peak.toFixed(4) : '0.0000'}
+                  </span>
+                  <span className="text-slate-500 text-[10px]" title="Configured silence gate threshold">
+                    (Floor: {(silenceThresholdRms * 100).toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+
               <div className="level-bar">
                 <div
-                  className="level-bar-fill"
-                  style={{ width: `${Math.min(100, isMonitoring ? rms * 250 : 0)}%` }}
+                  className={`level-bar-fill transition-all duration-100 ${
+                    isSilenceGated ? 'bg-cyan-700/50' : 'bg-gradient-to-r from-cyan-500 to-emerald-400'
+                  }`}
+                  style={{ width: `${Math.min(100, isMonitoring ? Math.max(1, rms * 300) : 0)}%` }}
                 />
               </div>
-              <span className="font-mono text-xs text-slate-400 w-12 text-right">
-                {isMonitoring ? `${(rms * 100).toFixed(0)}%` : '0%'}
-              </span>
+
+              {isMonitoring && isSilenceGated && gateReason && (
+                <div className="text-[10.5px] text-cyan-400/80 font-mono italic">
+                  {gateReason}
+                </div>
+              )}
             </div>
 
             {/* Event Timeline */}
@@ -486,8 +553,11 @@ export const App: React.FC = () => {
               topClass={topClass}
               isScreamingScoreHigh={isScreamingScoreHigh}
               isScreamingAlert={isScreamingAlert}
+              isSilenceGated={isSilenceGated}
+              gateReason={gateReason}
             />
           </div>
+
         </div>
       ) : (
         /* File Test Mode */

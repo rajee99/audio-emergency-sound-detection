@@ -1,0 +1,196 @@
+{
+  "evaluation_title": "Held-Out Emergency Detection & Silence Gating Evaluation",
+  "dataset_composition": {
+    "total_clips_evaluated": 34,
+    "silence_clips": 5,
+    "quiet_room_clips": 5,
+    "genuine_audioset_clips": 24,
+    "total_non_emergency_seconds": 150.0,
+    "total_non_emergency_minutes": 2.5,
+    "silence_seconds": 50.0,
+    "quiet_room_seconds": 50.0,
+    "ambient_background_seconds": 50.0
+  },
+  "silence_and_false_alarm_analysis": {
+    "silence_false_alerts": 0,
+    "silence_false_alarms_per_minute": 0.0,
+    "quiet_room_false_alerts": 0,
+    "quiet_room_false_alarms_per_minute": 0.0,
+    "ambient_background_false_alerts": 29,
+    "ambient_background_false_alarms_per_minute": 34.8,
+    "overall_non_emergency_false_alarms_per_minute": 11.6
+  },
+  "emergency_sensitivity": {
+    "emergency_clips_tested": 19,
+    "emergency_clips_detected": 19,
+    "emergency_clip_recall": 1.0
+  },
+  "macro_metrics": {
+    "macro_f1": 0.4275,
+    "weighted_f1": 0.5558
+  },
+  "per_class_performance": {
+    "screaming": {
+      "is_emergency": true,
+      "threshold": 0.46,
+      "window_support": 76,
+      "confusion": {
+        "tp": 48,
+        "fp": 37,
+        "tn": 527,
+        "fn": 28
+      },
+      "precision": 0.5647,
+      "precision_95ci": [
+        0.4588,
+        0.665
+      ],
+      "recall": 0.6316,
+      "recall_95ci": [
+        0.5193,
+        0.7312
+      ],
+      "f1_score": 0.5963,
+      "average_precision": 0.6538
+    },
+    "alarm": {
+      "is_emergency": true,
+      "threshold": 0.54,
+      "window_support": 57,
+      "confusion": {
+        "tp": 33,
+        "fp": 22,
+        "tn": 561,
+        "fn": 24
+      },
+      "precision": 0.6,
+      "precision_95ci": [
+        0.4681,
+        0.7188
+      ],
+      "recall": 0.5789,
+      "recall_95ci": [
+        0.4498,
+        0.6981
+      ],
+      "f1_score": 0.5893,
+      "average_precision": 0.6931
+    },
+    "glass_shatter": {
+      "is_emergency": true,
+      "threshold": 0.42,
+      "window_support": 51,
+      "confusion": {
+        "tp": 16,
+        "fp": 162,
+        "tn": 427,
+        "fn": 35
+      },
+      "precision": 0.0899,
+      "precision_95ci": [
+        0.0561,
+        0.141
+      ],
+      "recall": 0.3137,
+      "recall_95ci": [
+        0.2033,
+        0.4503
+      ],
+      "f1_score": 0.1397,
+      "average_precision": 0.1029
+    },
+    "smash_crash": {
+      "is_emergency": true,
+      "threshold": 0.5,
+      "window_support": 57,
+      "confusion": {
+        "tp": 38,
+        "fp": 69,
+        "tn": 514,
+        "fn": 19
+      },
+      "precision": 0.3551,
+      "precision_95ci": [
+        0.2709,
+        0.4494
+      ],
+      "recall": 0.6667,
+      "recall_95ci": [
+        0.5372,
+        0.7751
+      ],
+      "f1_score": 0.4634,
+      "average_precision": 0.3217
+    },
+    "explosion": {
+      "is_emergency": true,
+      "threshold": 0.42,
+      "window_support": 57,
+      "confusion": {
+        "tp": 6,
+        "fp": 27,
+        "tn": 556,
+        "fn": 51
+      },
+      "precision": 0.1818,
+      "precision_95ci": [
+        0.0861,
+        0.3439
+      ],
+      "recall": 0.1053,
+      "recall_95ci": [
+        0.0491,
+        0.2112
+      ],
+      "f1_score": 0.1333,
+      "average_precision": 0.1967
+    },
+    "gunshot": {
+      "is_emergency": true,
+      "threshold": 0.42,
+      "window_support": 57,
+      "confusion": {
+        "tp": 42,
+        "fp": 177,
+        "tn": 406,
+        "fn": 15
+      },
+      "precision": 0.1918,
+      "precision_95ci": [
+        0.1451,
+        0.2491
+      ],
+      "recall": 0.7368,
+      "recall_95ci": [
+        0.6102,
+        0.8335
+      ],
+      "f1_score": 0.3043,
+      "average_precision": 0.1679
+    },
+    "background": {
+      "is_emergency": false,
+      "threshold": 0.43,
+      "window_support": 285,
+      "confusion": {
+        "tp": 239,
+        "fp": 100,
+        "tn": 255,
+        "fn": 46
+      },
+      "precision": 0.705,
+      "precision_95ci": [
+        0.6544,
+        0.751
+      ],
+      "recall": 0.8386,
+      "recall_95ci": [
+        0.7914,
+        0.8768
+      ],
+      "f1_score": 0.766,
+      "average_precision": 0.8845
+    }
+  },
+  "audio_only_integrity_statement": "This system is strictly audio-only and analyzes environmental acoustic characteristics (log-mel energy, harmonic structures, and spectral envelopes). It does not use speech recognition, spoken language transcription, semantic intent parsing, or natural language processing, and does not make any legal, factual, or criminal claims regarding whether a crime or emergency occurred."
+}

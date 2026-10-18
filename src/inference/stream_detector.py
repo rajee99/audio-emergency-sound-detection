@@ -44,6 +44,10 @@ class WindowPrediction:
     persistence_requirements: Dict[str, int]
     detected_classes: List[str]
     emergency_score: float
+    rms: float = 0.0
+    peak: float = 0.0
+    is_silence_gated: bool = False
+    gate_reason: Optional[str] = None
 
 
 @dataclass
@@ -58,6 +62,7 @@ class EmergencyAlert:
     persistence_count: int
     alert_level: str  # 'WARNING'
     message: str
+    trigger_reason: str = ""
 
 
 class StreamEmergencyDetector:
@@ -124,22 +129,61 @@ class StreamEmergencyDetector:
             "alert_message", "Potential acoustic warning detected — human verification required."
         ))
 
+        # Configurable silence gating
+        detection_cfg = self.cfg.get("detection", {})
+        self.silence_gate_enabled = bool(detection_cfg.get("silence_gate_enabled", True))
+        self.silence_threshold_rms = float(detection_cfg.get("silence_threshold_rms", 0.004))
+        self.silence_threshold_peak = float(detection_cfg.get("silence_threshold_peak", 0.025))
+        self.sustained_silence_req = int(detection_cfg.get("sustained_silence_frames", 1))
+        self.consecutive_silence_frames = 0
+
         # State tracking
         self.persistence_counters: Dict[str, int] = {c: 0 for c in self.class_names}
         self.last_alert_time: Dict[str, float] = {c: -999.0 for c in self.class_names}
         self.smoothing_history = deque(maxlen=3)
 
     def reset_state(self) -> None:
-        """Reset temporal state counters and smoothing history for a fresh session."""
+        """Reset temporal state counters, smoothing history, and silence counter for a fresh session."""
         self.persistence_counters = {c: 0 for c in self.class_names}
         self.last_alert_time = {c: -999.0 for c in self.class_names}
         self.smoothing_history.clear()
+        self.consecutive_silence_frames = 0
 
     @torch.no_grad()
     def process_window(
         self, window_waveform: np.ndarray, start_sec: float, end_sec: float
     ) -> Tuple[WindowPrediction, List[EmergencyAlert]]:
         """Process a single ~0.96s window and generate window predictions and alerts."""
+        # 1. Energy & amplitude metrics on actual incoming audio
+        if len(window_waveform) == 0:
+            rms = 0.0
+            peak = 0.0
+        else:
+            rms = float(np.sqrt(np.mean(window_waveform ** 2)))
+            peak = float(np.max(np.abs(window_waveform)))
+
+        # 2. Check silence gating condition
+        is_silent_frame = (rms < self.silence_threshold_rms) and (peak < self.silence_threshold_peak)
+        is_silence_gated = False
+        gate_reason = None
+
+        if self.silence_gate_enabled and is_silent_frame:
+            self.consecutive_silence_frames += 1
+            if self.consecutive_silence_frames >= self.sustained_silence_req:
+                is_silence_gated = True
+                gate_reason = (
+                    f"Silence gate active: sustained near-silence detected "
+                    f"(RMS: {rms:.5f} < {self.silence_threshold_rms:.4f}, "
+                    f"Peak: {peak:.5f} < {self.silence_threshold_peak:.4f}). "
+                    f"Temporal state reset."
+                )
+                # Reset temporal state to prevent stale high scores or persistence counters
+                self.persistence_counters = {c: 0 for c in self.class_names}
+                self.smoothing_history.clear()
+        else:
+            self.consecutive_silence_frames = 0
+
+        # 3. Model forward pass
         sr = self.cfg["audio"]["sample_rate"]
         mel_spec = compute_log_mel_spectrogram(
             window_waveform,
@@ -150,63 +194,75 @@ class StreamEmergencyDetector:
             win_length=self.cfg["audio"]["win_length"],
         ).to(self.device)
 
-        # Model forward
         probs = self.model.predict_proba(mel_spec.unsqueeze(0)).cpu().numpy()[0]
         raw_prob_dict = {
             self.class_names[i]: float(round(probs[i], 4))
             for i in range(self.num_classes)
         }
 
-        self.smoothing_history.append(probs)
-
-        # Smoothed probabilities across recent rolling window
-        smoothed_probs = np.mean(np.array(self.smoothing_history), axis=0)
-
-        prob_dict = {
-            self.class_names[i]: float(round(smoothed_probs[i], 4))
-            for i in range(self.num_classes)
-        }
-
-        # Level 1: Acoustic event classification (using smoothed score)
-        detected_classes = []
-        for cname, score in prob_dict.items():
-            if score >= self.thresholds[cname]:
-                detected_classes.append(cname)
-
-        # Level 2: Potential-emergency scoring (max score across emergency classes only)
-        emergency_scores = [
-            prob_dict[c] for c in self.class_names if c in self.emergency_classes
-        ]
-        max_emergency_score = max(emergency_scores) if emergency_scores else 0.0
-
-        # Level 3: Update persistence counters and alert generation
         alerts: List[EmergencyAlert] = []
-        for cname in self.emergency_classes:
-            score = prob_dict[cname]
-            thresh = self.thresholds[cname]
 
-            if score >= thresh:
-                self.persistence_counters[cname] += 1
-                # Check persistence condition
-                if self.persistence_counters[cname] >= self.persistence_requirements[cname]:
-                    # Check debounce cooldown
-                    if (start_sec - self.last_alert_time[cname]) >= self.debounce_seconds:
-                        self.last_alert_time[cname] = start_sec
-                        alerts.append(
-                            EmergencyAlert(
-                                timestamp_sec=round(start_sec, 2),
-                                end_timestamp_sec=round(end_sec, 2),
-                                event_category=cname,
-                                confidence_score=score,
-                                detection_threshold=thresh,
-                                persistence_count=self.persistence_counters[cname],
-                                alert_level="WARNING",
-                                message=f"{self.warning_message} [Event: {cname.upper()}]",
+        if is_silence_gated:
+            # Gated: Zero out emergency scores, set background to 1.0, emit zero alerts
+            prob_dict = {
+                c: (1.0 if c == "background" else 0.0)
+                for c in self.class_names
+            }
+            detected_classes = ["background"] if "background" in self.class_names else []
+            max_emergency_score = 0.0
+        else:
+            self.smoothing_history.append(probs)
+            smoothed_probs = np.mean(np.array(self.smoothing_history), axis=0)
+            prob_dict = {
+                self.class_names[i]: float(round(smoothed_probs[i], 4))
+                for i in range(self.num_classes)
+            }
+
+            # Level 1: Acoustic event classification (using smoothed score)
+            detected_classes = []
+            for cname, score in prob_dict.items():
+                if score >= self.thresholds[cname]:
+                    detected_classes.append(cname)
+
+            # Level 2: Potential-emergency scoring (max score across emergency classes only)
+            emergency_scores = [
+                prob_dict[c] for c in self.class_names if c in self.emergency_classes
+            ]
+            max_emergency_score = max(emergency_scores) if emergency_scores else 0.0
+
+            # Level 3: Update persistence counters and alert generation
+            for cname in self.emergency_classes:
+                score = prob_dict[cname]
+                thresh = self.thresholds[cname]
+
+                if score >= thresh:
+                    self.persistence_counters[cname] += 1
+                    # Check persistence condition
+                    if self.persistence_counters[cname] >= self.persistence_requirements[cname]:
+                        # Check debounce cooldown
+                        if (start_sec - self.last_alert_time[cname]) >= self.debounce_seconds:
+                            self.last_alert_time[cname] = start_sec
+                            reason = (
+                                f"Score {score:.3f} >= threshold {thresh:.2f} "
+                                f"for {self.persistence_counters[cname]}/{self.persistence_requirements[cname]} frames "
+                                f"(RMS: {rms:.4f}, Peak: {peak:.4f})"
                             )
-                        )
-            else:
-                # Sound subsided: reset persistence counter
-                self.persistence_counters[cname] = 0
+                            alerts.append(
+                                EmergencyAlert(
+                                    timestamp_sec=round(start_sec, 2),
+                                    end_timestamp_sec=round(end_sec, 2),
+                                    event_category=cname,
+                                    confidence_score=score,
+                                    detection_threshold=thresh,
+                                    persistence_count=self.persistence_counters[cname],
+                                    alert_level="WARNING",
+                                    message=f"{self.warning_message} [Event: {cname.upper()}]",
+                                    trigger_reason=reason,
+                                )
+                            )
+                else:
+                    # Sound subsided: reset persistence counter
+                    self.persistence_counters[cname] = 0
 
         win_pred = WindowPrediction(
             start_sec=round(start_sec, 2),
@@ -217,9 +273,14 @@ class StreamEmergencyDetector:
             persistence_requirements=dict(self.persistence_requirements),
             detected_classes=detected_classes,
             emergency_score=round(max_emergency_score, 4),
+            rms=round(rms, 6),
+            peak=round(peak, 6),
+            is_silence_gated=is_silence_gated,
+            gate_reason=gate_reason,
         )
 
         return win_pred, alerts
+
 
     def process_file(
         self, audio_file_path: str

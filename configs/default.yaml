@@ -127,3 +127,7 @@ detection:
   debounce_seconds: 3.0
   warning_score_threshold: 0.50
   alert_message: "Potential acoustic warning detected — human verification required."
+  silence_gate_enabled: true
+  silence_threshold_rms: 0.004 # ~ -48 dBFS: filters out microphone noise floor & digital zero
+  silence_threshold_peak: 0.025 # Peak amplitude floor (~ -32 dBFS)
+  sustained_silence_frames: 1 # Consecutive silent frames before resetting temporal state

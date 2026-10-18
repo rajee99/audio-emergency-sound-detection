@@ -57,8 +57,14 @@ export const EventTimeline: React.FC<EventTimelineProps> = ({ events, onClear })
                   <div className="text-[11px] text-slate-400">
                     Threshold: {(evt.threshold * 100).toFixed(0)}%
                   </div>
+                  {evt.triggerReason && (
+                    <div className="text-[10px] text-cyan-400/90 font-mono mt-0.5" title="Exact alert trigger condition">
+                      {evt.triggerReason}
+                    </div>
+                  )}
                 </div>
               </div>
+
 
               <div className="flex flex-col items-end gap-1">
                 <span className="font-mono text-xs font-bold text-red-400 bg-red-950/60 px-2 py-0.5 rounded border border-red-800/40">

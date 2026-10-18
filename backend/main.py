@@ -143,6 +143,12 @@ def initialize_global_model():
         "hop_duration_sec": global_cfg["audio"].get("hop_duration_sec", 0.25),
         "evaluation_metrics": eval_metrics.get("test_results_trained_model", {}),
         "test_size_disclosure": eval_metrics.get("test_size_disclosure", "Test split contains N=24 clips."),
+        "silence_gate": {
+            "enabled": global_cfg.get("detection", {}).get("silence_gate_enabled", True),
+            "threshold_rms": global_cfg.get("detection", {}).get("silence_threshold_rms", 0.004),
+            "threshold_peak": global_cfg.get("detection", {}).get("silence_threshold_peak", 0.025),
+            "sustained_frames": global_cfg.get("detection", {}).get("sustained_silence_frames", 1),
+        },
     }
 
 
@@ -239,8 +245,10 @@ async def predict_file(file: UploadFile = File(...)):
         audio = scipy.signal.resample(audio, num_target_samples).astype(np.float32)
 
     duration_sec = float(len(audio) / target_sr)
-    if duration_sec > 600.0:
-        raise HTTPException(status_code=400, detail="Audio file exceeds 10-minute maximum duration limit.")
+    # Log audio file properties
+    file_rms = float(np.sqrt(np.mean(audio ** 2))) if len(audio) > 0 else 0.0
+    file_peak = float(np.max(np.abs(audio))) if len(audio) > 0 else 0.0
+    print(f"[API PREDICT-FILE] Filename: {file.filename} | Duration: {duration_sec:.2f}s | SR: {target_sr}Hz | RMS: {file_rms:.5f} | Peak: {file_peak:.5f}")
 
     window_sec = float(global_cfg["audio"].get("window_duration_sec", 0.96))
     hop_sec = float(global_cfg["audio"].get("hop_duration_sec", 0.48))
@@ -263,6 +271,10 @@ async def predict_file(file: UploadFile = File(...)):
             "persistence_counts": pred.persistence_counts,
             "detected_classes": pred.detected_classes,
             "emergency_score": pred.emergency_score,
+            "rms": pred.rms,
+            "peak": pred.peak,
+            "is_silence_gated": pred.is_silence_gated,
+            "gate_reason": pred.gate_reason,
         })
         for c in pred.detected_classes:
             overall_detected.add(c)
@@ -274,19 +286,25 @@ async def predict_file(file: UploadFile = File(...)):
                 "detection_threshold": a.detection_threshold,
                 "persistence_count": a.persistence_count,
                 "message": a.message,
+                "trigger_reason": a.trigger_reason,
             })
 
     max_emergency_score = max([p["emergency_score"] for p in predictions]) if predictions else 0.0
+    gated_windows_count = sum(1 for p in predictions if p["is_silence_gated"])
 
     return {
         "filename": file.filename,
         "duration_sec": round(duration_sec, 2),
         "total_windows_processed": len(windows),
+        "silence_gated_windows": gated_windows_count,
+        "silence_gate_enabled": detector.silence_gate_enabled,
+        "silence_threshold_rms": detector.silence_threshold_rms,
         "max_emergency_score": round(max_emergency_score, 4),
         "overall_detected_events": sorted(list(overall_detected)),
         "alerts_emitted": all_alerts,
         "window_predictions": predictions,
     }
+
 
 
 @app.websocket("/ws/live")
@@ -311,6 +329,8 @@ async def websocket_live_inference(websocket: WebSocket):
     session_start_time = time.time()
     last_inference_time = 0.0
     inference_interval_sec = 0.25  # Run inference every 250 ms
+    last_log_time = 0.0
+    last_silence_gated = False
 
     try:
         while True:
@@ -354,8 +374,10 @@ async def websocket_live_inference(websocket: WebSocket):
                     )
                     latency_ms = (time.perf_counter() - t_start) * 1000
 
-                    # Calculate live audio RMS level
-                    rms = float(np.sqrt(np.mean(window_audio ** 2)))
+                    rms = float(pred.rms)
+                    peak = float(pred.peak)
+                    is_silence_gated = pred.is_silence_gated
+                    gate_reason = pred.gate_reason
 
                     raw_probs = pred.raw_probabilities
                     smoothed_probs = pred.probabilities
@@ -391,7 +413,17 @@ async def websocket_live_inference(websocket: WebSocket):
                             "persistence_count": alert.persistence_count,
                             "timestamp": alert.timestamp_sec,
                             "message": alert.message,
+                            "trigger_reason": alert.trigger_reason,
                         }
+
+                    # Server-side periodic audio ingest logging
+                    if (current_time - last_log_time) >= 2.0 or is_silence_gated != last_silence_gated:
+                        last_log_time = current_time
+                        last_silence_gated = is_silence_gated
+                        print(
+                            f"[WS AUDIO INGEST] SR: {target_sr}Hz | Buf: {len(audio_buffer)} smp | "
+                            f"RMS: {rms:.5f} | Peak: {peak:.5f} | Gated: {is_silence_gated} | Top: {top_class} ({top_score:.3f})"
+                        )
 
                     # Send structured state to client
                     await websocket.send_json({
@@ -410,7 +442,11 @@ async def websocket_live_inference(websocket: WebSocket):
                         "is_screaming_alert": is_screaming_alert,
                         "alert": alert_info,
                         "inference_latency_ms": round(latency_ms, 2),
-                        "rms": round(rms, 4),
+                        "rms": round(rms, 6),
+                        "peak": round(peak, 6),
+                        "is_silence_gated": is_silence_gated,
+                        "gate_reason": gate_reason,
+                        "silence_threshold_rms": session_detector.silence_threshold_rms,
                         "buffer_samples": len(audio_buffer),
                     })
 
@@ -429,8 +465,22 @@ async def websocket_live_inference(websocket: WebSocket):
                             if k in session_detector.thresholds:
                                 session_detector.thresholds[k] = float(v)
                         await websocket.send_json({"type": "config_ack", "thresholds": session_detector.thresholds})
+                    elif cmd == "set_silence_gate":
+                        if "silence_threshold_rms" in payload:
+                            session_detector.silence_threshold_rms = float(payload["silence_threshold_rms"])
+                        if "silence_threshold_peak" in payload:
+                            session_detector.silence_threshold_peak = float(payload["silence_threshold_peak"])
+                        if "enabled" in payload:
+                            session_detector.silence_gate_enabled = bool(payload["enabled"])
+                        await websocket.send_json({
+                            "type": "silence_gate_ack",
+                            "silence_gate_enabled": session_detector.silence_gate_enabled,
+                            "silence_threshold_rms": session_detector.silence_threshold_rms,
+                            "silence_threshold_peak": session_detector.silence_threshold_peak,
+                        })
                 except json.JSONDecodeError:
                     pass
+
 
     except WebSocketDisconnect:
         pass

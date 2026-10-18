@@ -160,9 +160,9 @@ export const FileTestMode: React.FC = () => {
               </div>
             </div>
             <div className="p-3 rounded bg-slate-900/60 border border-slate-800">
-              <div className="text-xs text-slate-400">Evaluation Mode</div>
-              <div className="text-xs font-mono text-emerald-400 mt-2">
-                VERIFIED PRERECORDED
+              <div className="text-xs text-slate-400">Silence Gating</div>
+              <div className="text-xs font-mono text-cyan-400 mt-2">
+                {result.silence_gated_windows || 0} / {result.total_windows_processed} GATED
               </div>
             </div>
           </div>
@@ -173,18 +173,26 @@ export const FileTestMode: React.FC = () => {
               {result.alerts_emitted.map((a, i) => (
                 <div
                   key={i}
-                  className="p-3 rounded bg-red-950/40 border border-red-900/50 flex items-center justify-between text-xs"
+                  className="p-3 rounded bg-red-950/40 border border-red-900/50 flex flex-col gap-1 text-xs"
                 >
-                  <span className="font-semibold text-red-300">
-                    🚨 {a.event_category.toUpperCase()}: {a.message}
-                  </span>
-                  <span className="font-mono text-slate-400">
-                    Time: +{a.timestamp_sec.toFixed(2)}s | Confidence: {(a.confidence_score * 100).toFixed(1)}%
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-red-300">
+                      🚨 {a.event_category.toUpperCase()}: {a.message}
+                    </span>
+                    <span className="font-mono text-slate-400">
+                      Time: +{a.timestamp_sec.toFixed(2)}s | Confidence: {(a.confidence_score * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  {a.trigger_reason && (
+                    <div className="text-[11px] font-mono text-cyan-400/90 italic">
+                      Trigger reason: {a.trigger_reason}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
+
         </div>
       )}
     </div>

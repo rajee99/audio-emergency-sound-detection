@@ -8,6 +8,7 @@ export class ContinuousResampler {
   private toSampleRate: number;
   private phase: number = 0.0;
   private lastSample: number = 0.0;
+  private hasLastSample: boolean = false;
 
   constructor(fromSampleRate: number, toSampleRate: number = 16000) {
     this.fromSampleRate = fromSampleRate;
@@ -17,38 +18,42 @@ export class ContinuousResampler {
   public reset(): void {
     this.phase = 0.0;
     this.lastSample = 0.0;
+    this.hasLastSample = false;
   }
 
   public process(input: Float32Array): Float32Array {
-    if (this.fromSampleRate === this.toSampleRate) {
+    if (this.fromSampleRate === this.toSampleRate || input.length === 0) {
       return input;
     }
 
+    if (!this.hasLastSample) {
+      this.lastSample = input[0];
+      this.hasLastSample = true;
+      this.phase = 0.0;
+    }
+
     const ratio = this.fromSampleRate / this.toSampleRate;
-    const available = input.length - this.phase;
-    if (available <= 0) {
-      this.phase -= input.length;
-      return new Float32Array(0);
+    const L = input.length;
+    const maxOutLen = Math.ceil(L / ratio) + 2;
+    const temp = new Float32Array(maxOutLen);
+    let count = 0;
+    let t = this.phase;
+
+    while (t < L - 1) {
+      const k = Math.floor(t);
+      const frac = t - k;
+
+      const s0 = k === -1 ? this.lastSample : input[k];
+      const s1 = input[k + 1];
+
+      temp[count++] = s0 * (1.0 - frac) + s1 * frac;
+      t += ratio;
     }
 
-    const outLen = Math.floor(available / ratio);
-    const output = new Float32Array(outLen);
+    this.phase = t - L;
+    this.lastSample = input[L - 1];
 
-    for (let i = 0; i < outLen; i++) {
-      const pos = this.phase + i * ratio;
-      const idx = Math.floor(pos);
-      const frac = pos - idx;
-
-      const s0 = idx === 0 ? this.lastSample : input[idx - 1];
-      const s1 = idx < input.length ? input[idx] : this.lastSample;
-      output[i] = s0 * (1.0 - frac) + s1 * frac;
-    }
-
-    this.phase = (this.phase + outLen * ratio) - input.length;
-    if (input.length > 0) {
-      this.lastSample = input[input.length - 1];
-    }
-
-    return output;
+    return new Float32Array(temp.subarray(0, count));
   }
 }
+
