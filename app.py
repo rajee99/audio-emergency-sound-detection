@@ -118,16 +118,14 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.subheader("🎚️ Decision Thresholds")
     screaming_th = st.sidebar.slider("Screaming Threshold", 0.10, 0.90, 0.45, 0.05)
-    siren_th = st.sidebar.slider("Siren Threshold", 0.10, 0.90, 0.50, 0.05)
     alarm_th = st.sidebar.slider("Alarm Threshold", 0.10, 0.90, 0.50, 0.05)
     glass_th = st.sidebar.slider("Glass Shatter Threshold", 0.10, 0.90, 0.45, 0.05)
     crash_th = st.sidebar.slider("Smash / Crash Threshold", 0.10, 0.90, 0.45, 0.05)
     explosion_th = st.sidebar.slider("Explosion Threshold", 0.10, 0.90, 0.45, 0.05)
-    gunshot_th = st.sidebar.slider("Gunshot Threshold", 0.10, 0.90, 0.40, 0.05)
+    gunshot_th = st.sidebar.slider("Gunshot Threshold", 0.10, 0.90, 0.50, 0.05)
 
     custom_thresholds = {
         "screaming": screaming_th,
-        "siren": siren_th,
         "alarm": alarm_th,
         "glass_shatter": glass_th,
         "smash_crash": crash_th,

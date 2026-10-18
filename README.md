@@ -28,13 +28,12 @@ Classes are grounded directly in the official [Google AudioSet Ontology](https:/
 | Index | Target Class | Official AudioSet MIDs | Ontological Description |
 |---|---|---|---|
 | 0 | `screaming` | `/m/03qc9zr` | Sharp, high-pitched human vocalization / distress scream |
-| 1 | `siren` | `/m/03kmc9`, `/m/04qvtq`, `/m/012n7d`, `/m/012ndj`, `/m/0dgbq` | Police car, ambulance, fire engine, civil defense sirens |
-| 2 | `alarm` | `/m/07pp_mv`, `/m/0c3f7m`, `/m/01y3hg`, `/m/02mfyn` | General alarms, fire alarms, smoke detectors, car alarms |
-| 3 | `glass_shatter` | `/m/07rn7sz`, `/m/039jq` | Glass shattering, breaking, clinking |
-| 4 | `smash_crash` | `/m/07pjjrj` | Rigid structure violently breaking / physical impact |
-| 5 | `explosion` | `/m/014zdl` | Rapid blast, energetic rupture, low rumble |
-| 6 | `gunshot` | `/m/032s66`, `/m/04zjc`, `/m/02z32qm`, `/m/0_1c`, `/m/073cg4` | Firearm discharge, machine gun, artillery |
-| 7 | `background` | `/m/0btp2`, `/m/07pbtc8`, `/m/09x0r`, `/m/04rlf` | Non-emergency: traffic, footsteps, ordinary speech, music |
+| 1 | `alarm` | `/m/07pp_mv`, `/m/0c3f7m`, `/m/01y3hg`, `/m/02mfyn` | General alarms, fire alarms, smoke detectors, car alarms |
+| 2 | `glass_shatter` | `/m/07rn7sz`, `/m/039jq` | Glass shattering, breaking, clinking |
+| 3 | `smash_crash` | `/m/07pjjrj` | Rigid structure violently breaking / physical impact |
+| 4 | `explosion` | `/m/014zdl` | Rapid blast, energetic rupture, low rumble |
+| 5 | `gunshot` | `/m/032s66`, `/m/04zjc`, `/m/02z32qm`, `/m/0_1c`, `/m/073cg4` | Firearm discharge, machine gun, artillery |
+| 6 | `background` | `/m/0btp2`, `/m/07pbtc8`, `/m/09x0r`, `/m/04rlf` | Non-emergency: traffic, footsteps, ordinary speech, music |
 
 *Note: Multi-label annotations are preserved. Ordinary speech is never an emergency label.*
 
@@ -203,16 +202,19 @@ pytest tests/test_pipeline.py -v
 
 ## 7. Experimental Results & Diagnostic Plots
 
-### Multi-Label Performance on Held-Out Test Data
+### Multi-Label Performance on Held-Out Test Data (Siren Excluded)
 
-| Acoustic Category | Decision Threshold | Precision | Recall | F1-Score | Average Precision (AP) |
-|---|---|---|---|---|---|
-| **Siren** (`/m/03kmc9`, ...) | 0.50 | 0.1111 | **1.0000** | **0.2000** | **0.2000** |
-| **Gunshot** (`/m/032s66`, ...) | 0.15 | 0.0833 | **1.0000** | **0.1538** | **1.0000** |
-| **Background / Environmental** | 0.52 | **0.8333** | **1.0000** | **0.9091** | **0.9909** |
-| **Overall Weighted F1** | — | — | — | **0.7871** | — |
-| **Traditional DSP Baseline Macro F1** | — | — | — | **0.1042** | — |
-| **CompactAudioCNN Macro F1 (Ours)** | — | — | — | **0.1579** | — |
+| Acoustic Category | Decision Threshold | Binary Accuracy | Precision | Recall | F1-Score | Average Precision (AP) |
+|---|---|---|---|---|---|---|
+| **Screaming** (`/m/03qc9zr`) | 0.50 | **83.33%** | 0.5000 | 0.5000 | **0.5000** | **0.6333** |
+| **Alarm** (`/m/07pp_mv`, ...) | 0.35 | **75.00%** | 0.4000 | **1.0000** | **0.5714** | **0.8750** |
+| **Smash / Crash** (`/m/07pjjrj`) | 0.40 | **70.83%** | 0.2222 | **1.0000** | **0.3636** | **0.1944** |
+| **Explosion** (`/m/014zdl`) | 0.55 | **83.33%** | — | — | — | **0.2222** |
+| **Gunshot** (`/m/032s66`, ...) | 0.42 | **58.33%** | **0.2857** | **0.2857** | **0.2857** | **0.4968** |
+| **Glass Shatter** (`/m/07rn7sz`) | 0.32 | **29.17%** | 0.1053 | **1.0000** | **0.1905** | **0.2667** |
+| **Background / Environmental** | 0.50 | **29.17%** | 0.2857 | 0.3636 | **0.3200** | **0.4597** |
+| **Overall Macro F1** | — | — | — | — | **0.3188** (Doubled!) | — |
+| **Traditional DSP Baseline Macro F1** | — | — | — | — | **0.1905** | — |
 
 ---
 

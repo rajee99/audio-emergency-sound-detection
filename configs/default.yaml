@@ -27,17 +27,6 @@ classes:
       persistence_frames: 2
       mids:
         - "/m/03qc9zr" # Screaming
-    - name: "siren"
-      display_name: "Emergency Siren"
-      is_emergency: true
-      default_threshold: 0.50
-      persistence_frames: 2
-      mids:
-        - "/m/03kmc9" # Siren
-        - "/m/04qvtq" # Police car (siren)
-        - "/m/012n7d" # Ambulance (siren)
-        - "/m/012ndj" # Fire engine (siren)
-        - "/m/0dgbq"  # Civil defense siren
     - name: "alarm"
       display_name: "Alarm / Smoke Detector / Car Alarm"
       is_emergency: true
@@ -73,7 +62,7 @@ classes:
     - name: "gunshot"
       display_name: "Gunshot / Gunfire"
       is_emergency: true
-      default_threshold: 0.40
+      default_threshold: 0.50
       persistence_frames: 1
       mids:
         - "/m/032s66" # Gunshot, gunfire
@@ -125,12 +114,12 @@ model:
   dropout: 0.30
 
 training:
-  batch_size: 8
-  epochs: 35
+  batch_size: 16
+  epochs: 40
   learning_rate: 0.001
   weight_decay: 0.0001
-  pos_weight_multiplier: 1.5
-  early_stopping_patience: 10
+  pos_weight_multiplier: 1.0
+  early_stopping_patience: 12
   lr_scheduler: "plateau" # 'plateau' or 'cosine'
 
 detection:

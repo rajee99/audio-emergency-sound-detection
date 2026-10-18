@@ -2,81 +2,72 @@
   "model_architecture": "CompactAudioCNN (AudioSet 2017)",
   "calibrated_thresholds": {
     "screaming": 0.5,
-    "siren": 0.5,
-    "alarm": 0.5,
-    "glass_shatter": 0.5,
-    "smash_crash": 0.5,
-    "explosion": 0.5,
-    "gunshot": 0.15,
-    "background": 0.52
+    "alarm": 0.35,
+    "glass_shatter": 0.32,
+    "smash_crash": 0.4,
+    "explosion": 0.55,
+    "gunshot": 0.42,
+    "background": 0.5
   },
   "test_results_trained_model": {
-    "macro_f1": 0.1579,
-    "weighted_f1": 0.7871,
+    "macro_f1": 0.3188,
+    "weighted_f1": 0.3411,
     "per_class": {
       "screaming": {
         "threshold": 0.5,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "average_precision": 0.0,
-        "support": 0
-      },
-      "siren": {
-        "threshold": 0.5,
-        "precision": 0.1111,
-        "recall": 1.0,
-        "f1": 0.2,
-        "average_precision": 0.2,
-        "support": 1
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "average_precision": 0.6333,
+        "support": 4
       },
       "alarm": {
-        "threshold": 0.5,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "average_precision": 0.0,
-        "support": 0
+        "threshold": 0.35,
+        "precision": 0.4,
+        "recall": 1.0,
+        "f1": 0.5714,
+        "average_precision": 0.875,
+        "support": 4
       },
       "glass_shatter": {
-        "threshold": 0.5,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "average_precision": 0.0,
-        "support": 0
+        "threshold": 0.32,
+        "precision": 0.1053,
+        "recall": 1.0,
+        "f1": 0.1905,
+        "average_precision": 0.2667,
+        "support": 2
       },
       "smash_crash": {
-        "threshold": 0.5,
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0,
-        "average_precision": 0.0,
-        "support": 0
+        "threshold": 0.4,
+        "precision": 0.2222,
+        "recall": 1.0,
+        "f1": 0.3636,
+        "average_precision": 0.1944,
+        "support": 2
       },
       "explosion": {
-        "threshold": 0.5,
+        "threshold": 0.55,
         "precision": 0.0,
         "recall": 0.0,
         "f1": 0.0,
-        "average_precision": 0.0,
-        "support": 0
+        "average_precision": 0.2222,
+        "support": 2
       },
       "gunshot": {
-        "threshold": 0.15,
-        "precision": 0.0833,
-        "recall": 1.0,
-        "f1": 0.1538,
-        "average_precision": 1.0,
-        "support": 1
+        "threshold": 0.42,
+        "precision": 0.2857,
+        "recall": 0.2857,
+        "f1": 0.2857,
+        "average_precision": 0.4968,
+        "support": 7
       },
       "background": {
-        "threshold": 0.52,
-        "precision": 0.8333,
-        "recall": 1.0,
-        "f1": 0.9091,
-        "average_precision": 0.9909,
-        "support": 10
+        "threshold": 0.5,
+        "precision": 0.2857,
+        "recall": 0.3636,
+        "f1": 0.32,
+        "average_precision": 0.4597,
+        "support": 11
       }
     },
     "background_false_positive_analysis": {
@@ -84,7 +75,7 @@
     }
   },
   "baseline_comparison": {
-    "macro_f1": 0.1042,
-    "weighted_f1": 0.1944
+    "macro_f1": 0.1905,
+    "weighted_f1": 0.25
   }
 }

@@ -152,10 +152,10 @@ def evaluate_test_set(
     weighted_f1 = float(f1_score(targets_arr, preds_arr, average="weighted", zero_division=0))
 
     # False positive rate on Background audio (ordinary audio flagged as emergency)
-    # Background is class index 7
-    bg_mask = (targets_arr[:, 7] == 1) & (np.sum(targets_arr[:, :7], axis=1) == 0)
+    bg_idx = class_names.index("background") if "background" in class_names else len(class_names) - 1
+    bg_mask = (targets_arr[:, bg_idx] == 1) & (np.sum(targets_arr[:, :bg_idx], axis=1) == 0)
     if np.sum(bg_mask) > 0:
-        bg_preds = preds_arr[bg_mask, :7]  # Did any emergency class trigger?
+        bg_preds = preds_arr[bg_mask, :bg_idx]  # Did any emergency class trigger?
         false_alarms = np.sum(np.any(bg_preds == 1, axis=1))
         total_bg = np.sum(bg_mask)
         false_positive_rate_bg = float(false_alarms / total_bg)

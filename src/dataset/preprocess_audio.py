@@ -117,7 +117,7 @@ def extract_and_cache_features(
 
 
 def compute_class_weights(df: pd.DataFrame, num_classes: int) -> List[float]:
-    """Calculate positive class weights for BCEWithLogitsLoss: pos_weight = (N - P) / P."""
+    """Calculate smoothed positive class weights for BCEWithLogitsLoss: pos_weight = clip(sqrt((N - P) / P), 1.0, 3.5)."""
     labels_matrix = []
     for raw_label in df["multi_hot_labels"]:
         vec = [int(x) for x in raw_label.split(",")]
@@ -134,7 +134,8 @@ def compute_class_weights(df: pd.DataFrame, num_classes: int) -> List[float]:
             pos_weights.append(1.0)
         else:
             neg = total_samples - p
-            weight = float(max(1.0, neg / p))
+            # Sqrt-smoothed weight prevents gradient explosion and massive false positive rates
+            weight = float(np.clip(np.sqrt(neg / max(1, p)), 1.0, 3.5))
             pos_weights.append(round(weight, 4))
 
     return pos_weights

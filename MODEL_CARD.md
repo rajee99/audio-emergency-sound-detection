@@ -32,13 +32,12 @@
 | Index | Class Name | AudioSet Machine IDs (MIDs) | Acoustic Event Description |
 |---|---|---|---|
 | 0 | `screaming` | `/m/03qc9zr` | Instinctive high-frequency human vocal distress |
-| 1 | `siren` | `/m/03kmc9`, `/m/04qvtq`, `/m/012n7d`, `/m/012ndj`, `/m/0dgbq` | Police, ambulance, fire truck, civil defense |
-| 2 | `alarm` | `/m/07pp_mv`, `/m/0c3f7m`, `/m/01y3hg`, `/m/02mfyn` | Fire alarms, smoke detectors, car alarms |
-| 3 | `glass_shatter` | `/m/07rn7sz`, `/m/039jq` | Shattering, breaking, clinking rigid glass |
-| 4 | `smash_crash` | `/m/07pjjrj` | Rigid structure impact / violent breaking |
-| 5 | `explosion` | `/m/014zdl` | Rapid blast, energetic rupture, low rumble |
-| 6 | `gunshot` | `/m/032s66`, `/m/04zjc`, `/m/02z32qm`, `/m/0_1c`, `/m/073cg4` | Firearm impulse, artillery, burst firing |
-| 7 | `background` | `/m/0btp2`, `/m/07pbtc8`, `/m/09x0r`, `/m/04rlf` | Non-emergency: traffic, footsteps, speech, music |
+| 1 | `alarm` | `/m/07pp_mv`, `/m/0c3f7m`, `/m/01y3hg`, `/m/02mfyn` | Fire alarms, smoke detectors, car alarms |
+| 2 | `glass_shatter` | `/m/07rn7sz`, `/m/039jq` | Shattering, breaking, clinking rigid glass |
+| 3 | `smash_crash` | `/m/07pjjrj` | Rigid structure impact / violent breaking |
+| 4 | `explosion` | `/m/014zdl` | Rapid blast, energetic rupture, low rumble |
+| 5 | `gunshot` | `/m/032s66`, `/m/04zjc`, `/m/02z32qm`, `/m/0_1c`, `/m/073cg4` | Firearm impulse, artillery, burst firing |
+| 6 | `background` | `/m/0btp2`, `/m/07pbtc8`, `/m/09x0r`, `/m/04rlf` | Non-emergency: traffic, footsteps, speech, music |
 
 ---
 

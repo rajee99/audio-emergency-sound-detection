@@ -1,8 +1,7 @@
 {
-  "num_classes": 8,
+  "num_classes": 7,
   "class_names": [
     "screaming",
-    "siren",
     "alarm",
     "glass_shatter",
     "smash_crash",
@@ -10,17 +9,16 @@
     "gunshot",
     "background"
   ],
-  "train_samples": 56,
-  "val_samples": 12,
-  "test_samples": 12,
+  "train_samples": 108,
+  "val_samples": 23,
+  "test_samples": 24,
   "pos_weights": [
-    27.0,
-    5.2222,
-    10.2,
-    55.0,
-    27.0,
-    1.0,
-    10.2,
+    2.5912,
+    2.5912,
+    2.9695,
+    3.3166,
+    2.8284,
+    1.9224,
     1.0
   ]
 }

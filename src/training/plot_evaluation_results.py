@@ -383,9 +383,10 @@ def main():
     weighted_f1 = float(f1_score(test_targets_arr, test_preds_arr, average="weighted", zero_division=0))
 
     # Background false alarm
-    bg_mask = (test_targets_arr[:, 7] == 1) & (np.sum(test_targets_arr[:, :7], axis=1) == 0)
+    bg_idx = class_names.index("background") if "background" in class_names else len(class_names) - 1
+    bg_mask = (test_targets_arr[:, bg_idx] == 1) & (np.sum(test_targets_arr[:, :bg_idx], axis=1) == 0)
     if np.sum(bg_mask) > 0:
-        false_alarms = np.sum(np.any(test_preds_arr[bg_mask, :7] == 1, axis=1))
+        false_alarms = np.sum(np.any(test_preds_arr[bg_mask, :bg_idx] == 1, axis=1))
         fa_rate = float(false_alarms / np.sum(bg_mask))
     else:
         fa_rate = 0.0
