@@ -120,8 +120,8 @@ d:/ml/fydp/
 
 ### Step 1: Clone and Set Up Environment
 ```bash
-git clone https://github.com/rajee99/Student-Stress-monitoring.git
-cd Student-Stress-monitoring
+git clone https://github.com/rajee99/audio-emergency-sound-detection.git
+cd audio-emergency-sound-detection
 
 # Create virtual environment (recommended)
 python -m venv venv
