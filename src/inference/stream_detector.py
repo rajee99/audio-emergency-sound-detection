@@ -17,8 +17,9 @@ from collections import deque
 from dataclasses import asdict, dataclass
 import json
 import os
+from pathlib import Path
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -33,11 +34,14 @@ from src.utils.audio_utils import compute_log_mel_spectrogram, load_audio, slice
 
 @dataclass
 class WindowPrediction:
-    """Prediction output for a single sliding window."""
+    """Prediction output for a single sliding window with explicit raw and smoothed scores."""
 
     start_sec: float
     end_sec: float
-    probabilities: Dict[str, float]
+    raw_probabilities: Dict[str, float]
+    probabilities: Dict[str, float]  # Smoothed
+    persistence_counts: Dict[str, int]
+    persistence_requirements: Dict[str, int]
     detected_classes: List[str]
     emergency_score: float
 
@@ -57,7 +61,7 @@ class EmergencyAlert:
 
 
 class StreamEmergencyDetector:
-    """Real-time sliding window emergency sound detector."""
+    """Real-time sliding window emergency sound detector with session isolation."""
 
     def __init__(
         self,
@@ -65,6 +69,7 @@ class StreamEmergencyDetector:
         config_path: str = "configs/default.yaml",
         device: Optional[str] = None,
         custom_thresholds: Optional[Dict[str, float]] = None,
+        shared_model: Optional[CompactAudioCNN] = None,
     ):
         with open(config_path, "r", encoding="utf-8") as f:
             self.cfg = yaml.safe_load(f)
@@ -76,23 +81,28 @@ class StreamEmergencyDetector:
         else:
             self.device = torch.device(device)
 
-        # Load checkpoint
-        ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
-        self.class_names: List[str] = ckpt["class_names"]
-        self.num_classes = len(self.class_names)
+        if shared_model is not None:
+            self.model = shared_model
+            ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+            self.class_names = ckpt["class_names"]
+            self.num_classes = len(self.class_names)
+        else:
+            ckpt = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+            self.class_names: List[str] = ckpt["class_names"]
+            self.num_classes = len(self.class_names)
 
-        self.model = CompactAudioCNN(
-            num_classes=self.num_classes,
-            n_mels=self.cfg["audio"]["n_mels"],
-            embedding_dim=self.cfg["model"]["embedding_dim"],
-            hidden_dim=self.cfg["model"]["hidden_dim"],
-            dropout=self.cfg["model"]["dropout"],
-        ).to(self.device)
-        self.model.load_state_dict(ckpt["model_state_dict"])
-        self.model.eval()
+            self.model = CompactAudioCNN(
+                num_classes=self.num_classes,
+                n_mels=self.cfg["audio"]["n_mels"],
+                embedding_dim=self.cfg["model"]["embedding_dim"],
+                hidden_dim=self.cfg["model"]["hidden_dim"],
+                dropout=self.cfg["model"]["dropout"],
+            ).to(self.device)
+            self.model.load_state_dict(ckpt["model_state_dict"])
+            self.model.eval()
 
         # Class configuration & thresholds
-        self.emergency_classes = set()
+        self.emergency_classes: Set[str] = set()
         self.thresholds: Dict[str, float] = {}
         self.persistence_requirements: Dict[str, int] = {}
 
@@ -100,19 +110,19 @@ class StreamEmergencyDetector:
             cname = cls_info["name"]
             if cls_info.get("is_emergency", False):
                 self.emergency_classes.add(cname)
-            self.thresholds[cname] = cls_info.get("default_threshold", 0.50)
-            self.persistence_requirements[cname] = cls_info.get("persistence_frames", 2)
+            self.thresholds[cname] = float(cls_info.get("default_threshold", 0.50))
+            self.persistence_requirements[cname] = int(cls_info.get("persistence_frames", 2))
 
         # Override with custom/calibrated thresholds if provided
         if custom_thresholds:
             for k, v in custom_thresholds.items():
                 if k in self.thresholds:
-                    self.thresholds[k] = v
+                    self.thresholds[k] = float(v)
 
-        self.debounce_seconds = self.cfg["detection"].get("debounce_seconds", 3.0)
-        self.warning_message = self.cfg["detection"].get(
+        self.debounce_seconds = float(self.cfg["detection"].get("debounce_seconds", 3.0))
+        self.warning_message = str(self.cfg["detection"].get(
             "alert_message", "Potential acoustic warning detected — human verification required."
-        )
+        ))
 
         # State tracking
         self.persistence_counters: Dict[str, int] = {c: 0 for c in self.class_names}
@@ -120,7 +130,7 @@ class StreamEmergencyDetector:
         self.smoothing_history = deque(maxlen=3)
 
     def reset_state(self) -> None:
-        """Reset temporal state counters and smoothing history."""
+        """Reset temporal state counters and smoothing history for a fresh session."""
         self.persistence_counters = {c: 0 for c in self.class_names}
         self.last_alert_time = {c: -999.0 for c in self.class_names}
         self.smoothing_history.clear()
@@ -142,6 +152,11 @@ class StreamEmergencyDetector:
 
         # Model forward
         probs = self.model.predict_proba(mel_spec.unsqueeze(0)).cpu().numpy()[0]
+        raw_prob_dict = {
+            self.class_names[i]: float(round(probs[i], 4))
+            for i in range(self.num_classes)
+        }
+
         self.smoothing_history.append(probs)
 
         # Smoothed probabilities across recent rolling window
@@ -152,7 +167,7 @@ class StreamEmergencyDetector:
             for i in range(self.num_classes)
         }
 
-        # Level 1: Acoustic event classification
+        # Level 1: Acoustic event classification (using smoothed score)
         detected_classes = []
         for cname, score in prob_dict.items():
             if score >= self.thresholds[cname]:
@@ -164,15 +179,7 @@ class StreamEmergencyDetector:
         ]
         max_emergency_score = max(emergency_scores) if emergency_scores else 0.0
 
-        win_pred = WindowPrediction(
-            start_sec=round(start_sec, 2),
-            end_sec=round(end_sec, 2),
-            probabilities=prob_dict,
-            detected_classes=detected_classes,
-            emergency_score=round(max_emergency_score, 4),
-        )
-
-        # Level 3: Alert generation with persistence and debounce filters
+        # Level 3: Update persistence counters and alert generation
         alerts: List[EmergencyAlert] = []
         for cname in self.emergency_classes:
             score = prob_dict[cname]
@@ -180,7 +187,7 @@ class StreamEmergencyDetector:
 
             if score >= thresh:
                 self.persistence_counters[cname] += 1
-                # Check persistence
+                # Check persistence condition
                 if self.persistence_counters[cname] >= self.persistence_requirements[cname]:
                     # Check debounce cooldown
                     if (start_sec - self.last_alert_time[cname]) >= self.debounce_seconds:
@@ -200,6 +207,17 @@ class StreamEmergencyDetector:
             else:
                 # Sound subsided: reset persistence counter
                 self.persistence_counters[cname] = 0
+
+        win_pred = WindowPrediction(
+            start_sec=round(start_sec, 2),
+            end_sec=round(end_sec, 2),
+            raw_probabilities=raw_prob_dict,
+            probabilities=prob_dict,
+            persistence_counts=dict(self.persistence_counters),
+            persistence_requirements=dict(self.persistence_requirements),
+            detected_classes=detected_classes,
+            emergency_score=round(max_emergency_score, 4),
+        )
 
         return win_pred, alerts
 

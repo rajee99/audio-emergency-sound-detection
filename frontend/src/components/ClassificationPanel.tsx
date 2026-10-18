@@ -1,13 +1,16 @@
 import React from 'react';
-import type { TargetClass } from '../types';
-import { Shield, Volume2, HelpCircle } from 'lucide-react';
+import type { TargetClass, PersistenceClassState } from '../types';
+import { Shield, Volume2, Layers } from 'lucide-react';
 
 interface ClassificationPanelProps {
   classes: TargetClass[];
-  scores: Record<string, number>;
+  rawScores: Record<string, number>;
+  scores: Record<string, number>; // Smoothed
   thresholds: Record<string, number>;
+  persistenceState: Record<string, PersistenceClassState>;
   topClass: string;
-  isScreamingDetected: boolean;
+  isScreamingScoreHigh: boolean;
+  isScreamingAlert: boolean;
 }
 
 const CLASS_ICONS: Record<string, string> = {
@@ -22,10 +25,13 @@ const CLASS_ICONS: Record<string, string> = {
 
 export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
   classes,
+  rawScores,
   scores,
   thresholds,
+  persistenceState,
   topClass,
-  isScreamingDetected,
+  isScreamingScoreHigh,
+  isScreamingAlert,
 }) => {
   return (
     <div className="glass-panel classification-card">
@@ -34,24 +40,31 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
           <Volume2 size={18} className="text-blue-400" />
           <span>Acoustic Event Classification</span>
         </div>
-        <div className="text-xs text-slate-400 flex items-center gap-1">
-          <HelpCircle size={13} />
-          <span>Calibrated AudioSet 2017</span>
+        <div className="text-xs text-slate-400 flex items-center gap-1.5 font-mono">
+          <Layers size={13} className="text-cyan-400" />
+          <span>Raw + EMA Smoothed (0.96s)</span>
         </div>
       </div>
 
       <div className="flex flex-col gap-2.5">
         {classes.map((cls) => {
-          const score = scores[cls.name] ?? 0.0;
+          const smoothedScore = scores[cls.name] ?? 0.0;
+          const rawScore = rawScores[cls.name] ?? smoothedScore;
           const threshold = thresholds[cls.name] ?? cls.threshold;
-          const isTriggered = score >= threshold;
+          const isTriggered = smoothedScore >= threshold;
           const isTop = topClass === cls.name;
           const isScream = cls.name === 'screaming';
+
+          const pState = persistenceState[cls.name] || {
+            count: 0,
+            required: cls.persistence_frames || 2,
+            persisted: false,
+          };
 
           return (
             <div
               key={cls.name}
-              className={`class-row ${isTriggered && cls.is_emergency ? 'active-detection' : ''} ${
+              className={`class-row ${pState.persisted && cls.is_emergency ? 'active-detection' : ''} ${
                 isTop ? 'top-class' : ''
               }`}
             >
@@ -59,27 +72,65 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
                 <div className="class-info">
                   <span className="class-icon">{CLASS_ICONS[cls.name] || '🔊'}</span>
                   <span className="class-name">{cls.display_name}</span>
+
                   {cls.is_emergency ? (
-                    <span className="class-badge emergency">Emergency Event</span>
+                    <span className="class-badge emergency">Emergency</span>
                   ) : (
                     <span className="class-badge normal">Ambient</span>
                   )}
-                  {isScream && isScreamingDetected && (
+
+                  {/* Screaming Distinct Indicators */}
+                  {isScream && isScreamingAlert && (
                     <span className="badge-alert text-[10px] py-0.5 px-2">
-                      VOCAL DISTRESS
+                      VOCAL DISTRESS ALERT (PERSISTED)
                     </span>
                   )}
-                  {isTop && !isTriggered && (
-                    <span className="text-[10px] text-cyan-400 font-mono font-semibold">
-                      [LEADING]
+                  {isScream && !isScreamingAlert && isScreamingScoreHigh && (
+                    <span className="text-[10px] bg-amber-950/80 text-amber-300 border border-amber-600/40 rounded py-0.5 px-1.5 font-mono">
+                      HIGH RAW SPIKE ({pState.count}/{pState.required})
+                    </span>
+                  )}
+
+                  {/* Other Emergency Persisted Badges */}
+                  {!isScream && cls.is_emergency && pState.persisted && (
+                    <span className="badge-alert text-[10px] py-0.5 px-2">
+                      ALERT PERSISTED
                     </span>
                   )}
                 </div>
 
-                <div className="class-score-text">
-                  <span className={isTriggered && cls.is_emergency ? 'text-red-400 font-bold' : ''}>
-                    {(score * 100).toFixed(1)}%
+                <div className="flex items-center gap-2 font-mono text-xs">
+                  {/* Explicit Raw Score */}
+                  <span className="text-slate-400 text-[11px]" title="Instantaneous model forward pass score">
+                    Raw: {(rawScore * 100).toFixed(0)}%
                   </span>
+
+                  {/* Smoothed Score */}
+                  <span
+                    className={`font-bold ${
+                      pState.persisted && cls.is_emergency
+                        ? 'text-red-400'
+                        : isTriggered
+                        ? 'text-amber-400'
+                        : 'text-slate-200'
+                    }`}
+                  >
+                    {(smoothedScore * 100).toFixed(1)}%
+                  </span>
+
+                  {/* Persistence Counter */}
+                  {cls.is_emergency && pState.count > 0 && (
+                    <span
+                      className={`text-[10px] px-1 py-0.5 rounded ${
+                        pState.persisted
+                          ? 'bg-red-950 text-red-300 border border-red-800'
+                          : 'bg-slate-800 text-slate-300'
+                      }`}
+                      title="Consecutive windows above threshold"
+                    >
+                      {pState.count}/{pState.required}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -87,7 +138,7 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
               <div className="progress-track" title={`Threshold: ${(threshold * 100).toFixed(0)}%`}>
                 <div
                   className={`progress-fill ${cls.is_emergency && isTriggered ? 'alarm-fill' : ''}`}
-                  style={{ width: `${Math.min(100, Math.max(0, score * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(0, smoothedScore * 100))}%` }}
                 />
                 <div
                   className="threshold-marker"
@@ -106,8 +157,8 @@ export const ClassificationPanel: React.FC<ClassificationPanelProps> = ({
       <div className="mt-2 text-[11px] text-slate-500 leading-relaxed border-t border-slate-800/60 pt-2 flex items-start gap-1.5">
         <Shield size={13} className="text-slate-400 flex-shrink-0 mt-0.5" />
         <span>
-          Scores represent neural network posterior probabilities on 0.96s audio windows.
-          Acoustic patterns trigger warnings when score exceeds the class threshold for 2 consecutive windows.
+          Scores reflect acoustic neural network probabilities (raw instantaneous vs 3-frame rolling EMA).
+          Alerts require smoothed score $\ge$ threshold for $K \ge 2$ consecutive windows to filter non-emergency spikes.
         </span>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
-import type { ModelInfo, AlertData, TimelineEvent, TargetClass } from './types';
+import type { ModelInfo, AlertData, TimelineEvent, TargetClass, PersistenceClassState } from './types';
 import { fetchModelInfo, fetchHealth, WS_URL } from './services/api';
 import { Header } from './components/Header';
 import { ControlBar } from './components/ControlBar';
@@ -13,23 +13,8 @@ import { FileTestMode } from './components/FileTestMode';
 import { SelfTestModal } from './components/SelfTestModal';
 import { ModelInfoModal } from './components/ModelInfoModal';
 import { ThresholdSettingsModal } from './components/ThresholdSettingsModal';
+import { ContinuousResampler } from './utils/resampler';
 import { Clock, ShieldCheck, Volume2 } from 'lucide-react';
-
-// Fast linear audio resampler for converting browser sample rate (e.g. 44.1k/48k) to 16k
-function resampleBuffer(input: Float32Array, inputRate: number, targetRate = 16000): Float32Array {
-  if (inputRate === targetRate) return input;
-  const ratio = inputRate / targetRate;
-  const newLength = Math.round(input.length / ratio);
-  const result = new Float32Array(newLength);
-  for (let i = 0; i < newLength; i++) {
-    const originalIndex = i * ratio;
-    const indexFloor = Math.floor(originalIndex);
-    const indexCeil = Math.min(input.length - 1, Math.ceil(originalIndex));
-    const weight = originalIndex - indexFloor;
-    result[i] = input[indexFloor] * (1 - weight) + input[indexCeil] * weight;
-  }
-  return result;
-}
 
 export const App: React.FC = () => {
   // App Modes & Status
@@ -41,18 +26,21 @@ export const App: React.FC = () => {
 
   // Model & Classification State
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+  const [rawScores, setRawScores] = useState<Record<string, number>>({});
   const [scores, setScores] = useState<Record<string, number>>({});
   const [thresholds, setThresholds] = useState<Record<string, number>>({
-    screaming: 0.48,
+    screaming: 0.46,
     alarm: 0.54,
-    glass_shatter: 0.49,
+    glass_shatter: 0.42,
     smash_crash: 0.50,
-    explosion: 0.48,
-    gunshot: 0.50,
-    background: 0.48,
+    explosion: 0.42,
+    gunshot: 0.42,
+    background: 0.43,
   });
+  const [persistenceState, setPersistenceState] = useState<Record<string, PersistenceClassState>>({});
   const [topClass, setTopClass] = useState<string>('background');
-  const [isScreamingDetected, setIsScreamingDetected] = useState<boolean>(false);
+  const [isScreamingScoreHigh, setIsScreamingScoreHigh] = useState<boolean>(false);
+  const [isScreamingAlert, setIsScreamingAlert] = useState<boolean>(false);
   const [latencyMs, setLatencyMs] = useState<number>(0);
   const [rms, setRms] = useState<number>(0);
 
@@ -70,7 +58,9 @@ export const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const analyserNodeRef = useRef<AnalyserNode | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const resamplerRef = useRef<ContinuousResampler | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const monitoringTimerRef = useRef<number | null>(null);
   const lastAlertTimestampRef = useRef<number>(0);
@@ -155,7 +145,13 @@ export const App: React.FC = () => {
   const stopMonitoring = useCallback(() => {
     setIsMonitoring(false);
     setActiveAlert(null);
+    setIsScreamingScoreHigh(false);
+    setIsScreamingAlert(false);
 
+    if (workletNodeRef.current) {
+      workletNodeRef.current.disconnect();
+      workletNodeRef.current = null;
+    }
     if (scriptProcessorRef.current) {
       scriptProcessorRef.current.disconnect();
       scriptProcessorRef.current = null;
@@ -176,6 +172,9 @@ export const App: React.FC = () => {
       socketRef.current.close();
       socketRef.current = null;
     }
+    if (resamplerRef.current) {
+      resamplerRef.current.reset();
+    }
   }, []);
 
   // Start monitoring handler
@@ -191,7 +190,6 @@ export const App: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       mediaStreamRef.current = stream;
 
-      // Update devices list if labels were previously hidden
       const devList = await navigator.mediaDevices.enumerateDevices();
       setDevices(devList.filter((d) => d.kind === 'audioinput'));
 
@@ -206,21 +204,63 @@ export const App: React.FC = () => {
       analyser.smoothingTimeConstant = 0.8;
       analyserNodeRef.current = analyser;
 
-      // 4096 buffer size at 48k is ~85ms chunks
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      scriptProcessorRef.current = processor;
+      // Connect source to analyser for 60fps canvas visualization
+      sourceNode.connect(analyser);
+
+      // Initialize continuous phase-preserving resampler (from hardware rate to 16,000 Hz)
+      const resampler = new ContinuousResampler(audioCtx.sampleRate, 16000);
+      resamplerRef.current = resampler;
 
       // 3. Connect WebSocket to FastAPI backend
       const ws = new WebSocket(WS_URL);
       socketRef.current = ws;
       ws.binaryType = 'arraybuffer';
 
-      ws.onopen = () => {
-        setIsBackendConnected(true);
-        // Connect audio graph
-        sourceNode.connect(analyser);
+      const sendResampledAudio = (rawPcm: Float32Array) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          const resampled16k = resampler.process(rawPcm);
+          if (resampled16k.length > 0) {
+            ws.send(resampled16k.buffer as ArrayBuffer);
+          }
+        }
+      };
+
+      // 4. Setup AudioWorklet (Modern) with ScriptProcessorNode fallback
+      let workletRegistered = false;
+      if (audioCtx.audioWorklet && typeof audioCtx.audioWorklet.addModule === 'function') {
+        try {
+          await audioCtx.audioWorklet.addModule('/audio-capture-processor.js');
+          const workletNode = new AudioWorkletNode(audioCtx, 'audio-capture-processor');
+          workletNodeRef.current = workletNode;
+
+          workletNode.port.onmessage = (event) => {
+            const chunk = event.data as Float32Array;
+            sendResampledAudio(chunk);
+          };
+
+          analyser.connect(workletNode);
+          workletRegistered = true;
+          console.log('[AUDIO] AudioWorklet registered successfully.');
+        } catch (workletErr) {
+          console.warn('[AUDIO] AudioWorklet registration failed, falling back to ScriptProcessor:', workletErr);
+        }
+      }
+
+      if (!workletRegistered) {
+        // Fallback for older browsers
+        const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+        scriptProcessorRef.current = processor;
+        processor.onaudioprocess = (audioEvent) => {
+          const inputData = audioEvent.inputBuffer.getChannelData(0);
+          sendResampledAudio(inputData);
+        };
         analyser.connect(processor);
         processor.connect(audioCtx.destination);
+        console.log('[AUDIO] ScriptProcessorNode fallback initialized.');
+      }
+
+      ws.onopen = () => {
+        setIsBackendConnected(true);
         setIsMonitoring(true);
       };
 
@@ -228,20 +268,26 @@ export const App: React.FC = () => {
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'prediction') {
+            if (msg.raw_scores) setRawScores(msg.raw_scores);
             if (msg.scores) setScores(msg.scores);
+            if (msg.persistence_state) setPersistenceState(msg.persistence_state);
             if (msg.top_class) setTopClass(msg.top_class);
             if (msg.inference_latency_ms) setLatencyMs(msg.inference_latency_ms);
             if (msg.rms !== undefined) setRms(msg.rms);
-            if (msg.is_screaming_detected !== undefined) {
-              setIsScreamingDetected(msg.is_screaming_detected);
+
+            // Explicit Screaming Distinction
+            if (msg.is_screaming_score_high !== undefined) {
+              setIsScreamingScoreHigh(msg.is_screaming_score_high);
+            }
+            if (msg.is_screaming_alert !== undefined) {
+              setIsScreamingAlert(msg.is_screaming_alert);
             }
 
-            // Handle detection alert
+            // Handle alert emission
             if (msg.alert && msg.is_alert) {
               const alertObj: AlertData = msg.alert;
               setActiveAlert(alertObj);
 
-              // Debounce timeline additions by at least 2.5 seconds
               const nowSec = msg.timestamp || 0;
               if (nowSec - lastAlertTimestampRef.current >= 2.5) {
                 lastAlertTimestampRef.current = nowSec;
@@ -260,8 +306,6 @@ export const App: React.FC = () => {
                 };
                 setTimelineEvents((prev) => [newEvt, ...prev].slice(0, 50));
               }
-            } else if (!msg.is_emergency) {
-              // Optionally decay active alert if signal has subsided
             }
           }
         } catch (e) {
@@ -276,16 +320,6 @@ export const App: React.FC = () => {
 
       ws.onclose = () => {
         stopMonitoring();
-      };
-
-      // 4. Capture microphone Float32 samples and stream over WebSocket
-      processor.onaudioprocess = (audioEvent) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          const inputData = audioEvent.inputBuffer.getChannelData(0);
-          // Resample from browser audio context rate to target 16,000 Hz
-          const resampled16k = resampleBuffer(inputData, audioCtx.sampleRate, 16000);
-          ws.send(resampled16k.buffer as ArrayBuffer);
-        }
       };
     } catch (err: any) {
       alert(`Microphone access error: ${err.message || err}. Please ensure microphone permissions are granted in browser.`);
@@ -304,6 +338,8 @@ export const App: React.FC = () => {
   const handleResetTimeline = () => {
     setTimelineEvents([]);
     setActiveAlert(null);
+    setIsScreamingScoreHigh(false);
+    setIsScreamingAlert(false);
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'reset' }));
     }
@@ -321,13 +357,13 @@ export const App: React.FC = () => {
 
   const handleResetThresholdDefaults = () => {
     const defaults = {
-      screaming: 0.48,
+      screaming: 0.46,
       alarm: 0.54,
-      glass_shatter: 0.49,
+      glass_shatter: 0.42,
       smash_crash: 0.50,
-      explosion: 0.48,
-      gunshot: 0.50,
-      background: 0.48,
+      explosion: 0.42,
+      gunshot: 0.42,
+      background: 0.43,
     };
     setThresholds(defaults);
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -336,13 +372,13 @@ export const App: React.FC = () => {
   };
 
   const configuredClasses: TargetClass[] = modelInfo?.target_classes || [
-    { name: 'screaming', display_name: 'Screaming', is_emergency: true, threshold: 0.48 },
-    { name: 'alarm', display_name: 'Alarm', is_emergency: true, threshold: 0.54 },
-    { name: 'glass_shatter', display_name: 'Glass Shatter', is_emergency: true, threshold: 0.49 },
-    { name: 'smash_crash', display_name: 'Crash / Smash', is_emergency: true, threshold: 0.50 },
-    { name: 'explosion', display_name: 'Explosion', is_emergency: true, threshold: 0.48 },
-    { name: 'gunshot', display_name: 'Gunshot', is_emergency: true, threshold: 0.50 },
-    { name: 'background', display_name: 'Ambient / Background', is_emergency: false, threshold: 0.48 },
+    { name: 'screaming', display_name: 'Screaming', is_emergency: true, threshold: 0.46, persistence_frames: 2 },
+    { name: 'alarm', display_name: 'Alarm', is_emergency: true, threshold: 0.54, persistence_frames: 2 },
+    { name: 'glass_shatter', display_name: 'Glass Shatter', is_emergency: true, threshold: 0.42, persistence_frames: 1 },
+    { name: 'smash_crash', display_name: 'Crash / Smash', is_emergency: true, threshold: 0.50, persistence_frames: 1 },
+    { name: 'explosion', display_name: 'Explosion', is_emergency: true, threshold: 0.42, persistence_frames: 1 },
+    { name: 'gunshot', display_name: 'Gunshot', is_emergency: true, threshold: 0.42, persistence_frames: 1 },
+    { name: 'background', display_name: 'Ambient / Background', is_emergency: false, threshold: 0.43, persistence_frames: 1 },
   ];
 
   const formatElapsed = (sec: number) => {
@@ -443,10 +479,13 @@ export const App: React.FC = () => {
           <div className="flex flex-col gap-5">
             <ClassificationPanel
               classes={configuredClasses}
+              rawScores={rawScores}
               scores={scores}
               thresholds={thresholds}
+              persistenceState={persistenceState}
               topClass={topClass}
-              isScreamingDetected={isScreamingDetected}
+              isScreamingScoreHigh={isScreamingScoreHigh}
+              isScreamingAlert={isScreamingAlert}
             />
           </div>
         </div>

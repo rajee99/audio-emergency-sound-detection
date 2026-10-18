@@ -3,6 +3,7 @@ export interface TargetClass {
   display_name: string;
   is_emergency: boolean;
   threshold: number;
+  persistence_frames?: number;
 }
 
 export interface ModelInfo {
@@ -14,26 +15,38 @@ export interface ModelInfo {
   window_duration_sec: number;
   hop_duration_sec: number;
   evaluation_metrics?: Record<string, any>;
+  test_size_disclosure?: string;
 }
 
 export interface AlertData {
   event: string;
   score: number;
   threshold: number;
+  persistence_count?: number;
   timestamp: number;
   message: string;
+}
+
+export interface PersistenceClassState {
+  count: number;
+  required: number;
+  persisted: boolean;
 }
 
 export interface LivePredictionMessage {
   type: 'prediction' | 'error' | 'reset_ack' | 'config_ack';
   timestamp?: number;
-  scores?: Record<string, number>;
+  raw_scores?: Record<string, number>;
+  scores?: Record<string, number>; // Smoothed
   thresholds?: Record<string, number>;
+  persistence_state?: Record<string, PersistenceClassState>;
   top_class?: string;
   top_score?: number;
+  top_raw_score?: number;
   is_emergency?: boolean;
   is_alert?: boolean;
-  is_screaming_detected?: boolean;
+  is_screaming_score_high?: boolean;
+  is_screaming_alert?: boolean;
   alert?: AlertData | null;
   inference_latency_ms?: number;
   rms?: number;
@@ -55,7 +68,9 @@ export interface TimelineEvent {
 export interface FilePredictionWindow {
   start_sec: number;
   end_sec: number;
+  raw_probabilities?: Record<string, number>;
   probabilities: Record<string, number>;
+  persistence_counts?: Record<string, number>;
   detected_classes: string[];
   emergency_score: number;
 }
@@ -71,6 +86,7 @@ export interface FilePredictResponse {
     event_category: string;
     confidence_score: number;
     detection_threshold: number;
+    persistence_count?: number;
     message: string;
   }>;
   window_predictions: FilePredictionWindow[];

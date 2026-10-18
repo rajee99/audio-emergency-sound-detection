@@ -1,5 +1,6 @@
 {
   "dataset_name": "AudioSet 2017 Emergency Detection Subset",
+  "audited_manifest": "data/manifests/genuine_audioset_manifest.csv",
   "configured_classes": [
     "screaming",
     "alarm",
@@ -10,12 +11,14 @@
     "background"
   ],
   "num_classes": 7,
-  "total_clips_cataloged": 200,
+  "total_clips_in_manifest": 166,
   "retrieval_status": {
     "genuine_available_audio": 166,
-    "synthetic_fallback_fixtures": 34,
+    "synthetic_fixtures_in_manifest": 0,
+    "isolated_synthetic_test_fixtures": 34,
     "missing_audio_files": 0,
-    "corrupted_audio_files": 0
+    "corrupted_audio_files": 0,
+    "timestamp_discrepancies": 0
   },
   "genuine_per_class_representation": {
     "screaming": 25,
@@ -84,5 +87,9 @@
   },
   "label_hygiene": {
     "conflicting_emergency_and_background_clips": 0
+  },
+  "limitations_and_disclosures": {
+    "test_set_size": 24,
+    "test_set_disclosure": "The test split contains 24 clips. This sample size is sufficient for initial feasibility validation and threshold sanity checks, but exhibits wide confidence intervals. Reported test metrics reflect the exact predictions on these 24 held-out genuine clips and should not be generalized as population-level performance guarantees."
   }
 }
