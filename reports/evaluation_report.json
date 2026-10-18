@@ -1,0 +1,93 @@
+{
+  "model_architecture": "CompactAudioCNN (4 Conv Blocks + AdaptiveAvgPool + Linear)",
+  "test_results_trained_model": {
+    "macro_f1": 0.125,
+    "weighted_f1": 1.0,
+    "per_class": {
+      "screaming": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "siren": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "alarm": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "glass_shatter": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "smash_crash": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "explosion": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "gunshot": {
+        "threshold": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "average_precision": 0.0,
+        "support": 0
+      },
+      "background": {
+        "threshold": 0.15,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "average_precision": 1.0,
+        "support": 4
+      }
+    },
+    "background_false_positive_analysis": {
+      "total_pure_background_clips": 4,
+      "false_alarms": 1,
+      "false_alarm_rate": 0.25
+    }
+  },
+  "baseline_comparison": {
+    "baseline_name": "Acoustic Energy & Spectral Centroid DSP",
+    "macro_f1": 0.0,
+    "weighted_f1": 0.0
+  },
+  "calibrated_thresholds": {
+    "screaming": 0.5,
+    "siren": 0.5,
+    "alarm": 0.5,
+    "glass_shatter": 0.5,
+    "smash_crash": 0.5,
+    "explosion": 0.5,
+    "gunshot": 0.5,
+    "background": 0.15
+  }
+}

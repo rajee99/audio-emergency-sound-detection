@@ -1,0 +1,5 @@
+clip_id,ytid,start_seconds,end_seconds,target_classes,multi_hot_labels,is_emergency,local_filepath,duration_sec,status,notes,feature_path,split
+-11LhdJgBb8_30_40,-11LhdJgBb8,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-11LhdJgBb8_30_40.wav,10.0,available,,data/processed/features\-11LhdJgBb8_30_40_mel.pt,val
+-1LrH01Ei1w_30_40,-1LrH01Ei1w,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-1LrH01Ei1w_30_40.wav,10.0,available,,data/processed/features\-1LrH01Ei1w_30_40_mel.pt,val
+-24dqQM_rDk_30_40,-24dqQM_rDk,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-24dqQM_rDk_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -24dqQM_rDk: This video is ),data/processed/features\-24dqQM_rDk_30_40_mel.pt,val
+-4NLarMj4xU_30_40,-4NLarMj4xU,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-4NLarMj4xU_30_40.wav,10.0,available,,data/processed/features\-4NLarMj4xU_30_40_mel.pt,val

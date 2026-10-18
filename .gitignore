@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / Virtual Environment
+.pytest_cache/
+venv/
+env/
+.env
+
+# Raw audio datasets & Large Feature Caches
+data/raw/balanced_train/
+data/raw/eval/
+data/processed/features/*.pt
+artifacts/temp_upload.wav
+
+# IDE
+.vscode/
+.idea/

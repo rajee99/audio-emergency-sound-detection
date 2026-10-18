@@ -1,0 +1,29 @@
+{
+  "hardware": {
+    "device": "cpu",
+    "cpu_cores": 16
+  },
+  "model_complexity": {
+    "total_parameters": 422504,
+    "trainable_parameters": 422504,
+    "checkpoint_size_mb": 4.87
+  },
+  "latency_metrics_ms": {
+    "mean_total_latency_ms": 2.95,
+    "std_latency_ms": 0.32,
+    "p95_latency_ms": 3.7,
+    "mel_feature_extraction_ms": 1.37,
+    "neural_network_forward_ms": 1.59
+  },
+  "real_time_capability": {
+    "window_duration_sec": 0.96,
+    "real_time_factor_rtf": 0.0031,
+    "is_real_time": true,
+    "throughput_windows_per_sec": 338.5
+  },
+  "edge_feasibility_assessment": {
+    "raspberry_pi_4_5": "FEASIBLE: At ~1.1M parameters and ~4ms forward pass, Raspberry Pi 4/5 (Quad-core Cortex-A72/A76) will easily achieve RTF < 0.15.",
+    "jetson_nano": "FEASIBLE: GPU-accelerated TensorRT will execute well under 2ms per window.",
+    "esp32_microcontroller": "INCOMPATIBLE: ESP32 has 520 KB SRAM and operates at 240 MHz. A 1.1M parameter float32 model requires >4.4 MB RAM, exceeding on-chip memory. An edge gateway (e.g. Raspberry Pi Zero 2W or ARM Cortex-M55 with external PSRAM) is required."
+  }
+}

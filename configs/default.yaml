@@ -1,0 +1,140 @@
+project:
+  name: "audio-emergency-detector"
+  description: "Audio-Only Emergency Sound Detection Using AudioSet (2017)"
+  seed: 42
+  device: "auto" # 'cuda', 'cpu', or 'auto'
+
+audio:
+  sample_rate: 16000
+  channels: 1 # mono
+  target_length_sec: 10.0 # Standard AudioSet clip length
+  window_duration_sec: 0.96 # Streaming analysis window (~0.96s)
+  hop_duration_sec: 0.48 # 50% overlap for streaming
+  n_mels: 64
+  n_fft: 1024
+  hop_length: 320 # 20 ms hop at 16 kHz
+  win_length: 1024 # 64 ms window at 16 kHz
+  f_min: 50.0
+  f_max: 8000.0
+  normalize_audio: true
+
+classes:
+  target_classes:
+    - name: "screaming"
+      display_name: "Screaming / Distress Vocalization"
+      is_emergency: true
+      default_threshold: 0.45
+      persistence_frames: 2
+      mids:
+        - "/m/03qc9zr" # Screaming
+    - name: "siren"
+      display_name: "Emergency Siren"
+      is_emergency: true
+      default_threshold: 0.50
+      persistence_frames: 2
+      mids:
+        - "/m/03kmc9" # Siren
+        - "/m/04qvtq" # Police car (siren)
+        - "/m/012n7d" # Ambulance (siren)
+        - "/m/012ndj" # Fire engine (siren)
+        - "/m/0dgbq"  # Civil defense siren
+    - name: "alarm"
+      display_name: "Alarm / Smoke Detector / Car Alarm"
+      is_emergency: true
+      default_threshold: 0.50
+      persistence_frames: 2
+      mids:
+        - "/m/07pp_mv" # Alarm
+        - "/m/0c3f7m"  # Fire alarm
+        - "/m/01y3hg"  # Smoke detector, smoke alarm
+        - "/m/02mfyn"  # Car alarm
+    - name: "glass_shatter"
+      display_name: "Glass Shatter / Breaking"
+      is_emergency: true
+      default_threshold: 0.40
+      persistence_frames: 1
+      mids:
+        - "/m/07rn7sz" # Shatter
+        - "/m/039jq"   # Glass
+    - name: "smash_crash"
+      display_name: "Smash / Crash / Violent Impact"
+      is_emergency: true
+      default_threshold: 0.45
+      persistence_frames: 1
+      mids:
+        - "/m/07pjjrj" # Smash, crash
+    - name: "explosion"
+      display_name: "Explosion / Blast"
+      is_emergency: true
+      default_threshold: 0.45
+      persistence_frames: 1
+      mids:
+        - "/m/014zdl" # Explosion
+    - name: "gunshot"
+      display_name: "Gunshot / Gunfire"
+      is_emergency: true
+      default_threshold: 0.40
+      persistence_frames: 1
+      mids:
+        - "/m/032s66" # Gunshot, gunfire
+        - "/m/04zjc"  # Machine gun
+        - "/m/02z32qm" # Fusillade
+        - "/m/0_1c"   # Artillery fire
+        - "/m/073cg4" # Cap gun
+    - name: "background"
+      display_name: "Environmental Background / Speech / Footsteps"
+      is_emergency: false
+      default_threshold: 0.50
+      persistence_frames: 1
+      mids:
+        - "/m/0btp2"   # Traffic noise, roadway noise
+        - "/m/07pbtc8" # Walk, footsteps
+        - "/m/09x0r"   # Speech (ordinary dialogue / voice)
+        - "/m/04rlf"   # Music
+
+paths:
+  metadata_dir: "data/metadata"
+  manifests_dir: "data/manifests"
+  raw_audio_dir: "data/raw"
+  processed_dir: "data/processed"
+  user_audio_dir: "data/user_audio"
+  artifacts_dir: "artifacts"
+  reports_dir: "reports"
+
+data_pipeline:
+  subset_mode: true
+  max_samples_per_class: 50 # Configurable for initial small-subset / smoke-test
+  train_val_test_ratio: [0.70, 0.15, 0.15]
+  download_retries: 3
+  download_timeout_sec: 25
+
+augmentation:
+  enabled_for_training: true
+  gaussian_noise_snr_db: [15, 30]
+  gain_range_db: [-6, 6]
+  time_shift_max_sec: 0.5
+  spec_augment:
+    freq_mask_max_bins: 8
+    time_mask_max_frames: 16
+
+model:
+  backbone: "compact_cnn" # Options: 'compact_cnn', 'audio_mlp', 'resnet_audio'
+  input_features: "log_mel"
+  embedding_dim: 256
+  hidden_dim: 128
+  dropout: 0.30
+
+training:
+  batch_size: 16
+  epochs: 25
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  pos_weight_multiplier: 1.5
+  early_stopping_patience: 6
+  lr_scheduler: "plateau" # 'plateau' or 'cosine'
+
+detection:
+  persistence_default: 2
+  debounce_seconds: 3.0
+  warning_score_threshold: 0.50
+  alert_message: "Potential acoustic warning detected — human verification required."

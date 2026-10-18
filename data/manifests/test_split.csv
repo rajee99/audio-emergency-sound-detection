@@ -1,0 +1,5 @@
+clip_id,ytid,start_seconds,end_seconds,target_classes,multi_hot_labels,is_emergency,local_filepath,duration_sec,status,notes,feature_path,split
+--PJHxphWEs_30_40,--PJHxphWEs,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--PJHxphWEs_30_40.wav,10.0,available,,data/processed/features\--PJHxphWEs_30_40_mel.pt,test
+--aE2O5G5WE_0_10,--aE2O5G5WE,0.0,10.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--aE2O5G5WE_0_10.wav,10.0,available,,data/processed/features\--aE2O5G5WE_0_10_mel.pt,test
+-30H9V1IKps_6_16,-30H9V1IKps,6.0,16.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-30H9V1IKps_6_16.wav,9.371625,available,,data/processed/features\-30H9V1IKps_6_16_mel.pt,test
+-5-vmt2iKT0_30_40,-5-vmt2iKT0,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5-vmt2iKT0_30_40.wav,10.0,available,,data/processed/features\-5-vmt2iKT0_30_40_mel.pt,test

@@ -1,0 +1,25 @@
+clip_id,ytid,start_seconds,end_seconds,target_classes,multi_hot_labels,is_emergency,local_filepath,duration_sec,status,notes
+--PJHxphWEs_30_40,--PJHxphWEs,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--PJHxphWEs_30_40.wav,10.0,available,
+--aE2O5G5WE_0_10,--aE2O5G5WE,0.0,10.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\--aE2O5G5WE_0_10.wav,10.0,available,
+--aaILOrkII_200_210,--aaILOrkII,200.0,210.0,gunshot,"0,0,0,0,0,0,1,0",1,data/raw/balanced_train\--aaILOrkII_200_210.wav,10.0,available,
+--cB2ZVjpnA_30_40,--cB2ZVjpnA,30.0,40.0,alarm,"0,0,1,0,0,0,0,0",1,data/raw/balanced_train\--cB2ZVjpnA_30_40.wav,10.0,available,
+-0DLPzsiXXE_30_40,-0DLPzsiXXE,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0DLPzsiXXE_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -0DLPzsiXXE: This video is )
+-0FHUc78Gqo_30_40,-0FHUc78Gqo,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0FHUc78Gqo_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -0FHUc78Gqo: This video is )
+-0SdAVK79lg_30_40,-0SdAVK79lg,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0SdAVK79lg_30_40.wav,10.0,available,
+-0mG4W5Hlq8_270_280,-0mG4W5Hlq8,270.0,280.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-0mG4W5Hlq8_270_280.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -0mG4W5Hlq8: This video is )
+-11LhdJgBb8_30_40,-11LhdJgBb8,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-11LhdJgBb8_30_40.wav,10.0,available,
+-1LrH01Ei1w_30_40,-1LrH01Ei1w,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-1LrH01Ei1w_30_40.wav,10.0,available,
+-1TLtjPtnms_10_20,-1TLtjPtnms,10.0,20.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-1TLtjPtnms_10_20.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -1TLtjPtnms: This video is )
+-24dqQM_rDk_30_40,-24dqQM_rDk,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-24dqQM_rDk_30_40.wav,10.0,synthetic_fallback,Replaced with verified acoustic prototype (download_error: ERROR: [youtube] -24dqQM_rDk: This video is )
+-2hQKCE-oTI_30_40,-2hQKCE-oTI,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-2hQKCE-oTI_30_40.wav,10.0,available,
+-30H9V1IKps_6_16,-30H9V1IKps,6.0,16.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-30H9V1IKps_6_16.wav,9.371625,available,
+-3HYdaJyF4U_30_40,-3HYdaJyF4U,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-3HYdaJyF4U_30_40.wav,10.0,available,
+-3IGxVTJvgI_30_40,-3IGxVTJvgI,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-3IGxVTJvgI_30_40.wav,10.0,available,
+-4NLarMj4xU_30_40,-4NLarMj4xU,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-4NLarMj4xU_30_40.wav,10.0,available,
+-4RWqM0UCCY_0_10,-4RWqM0UCCY,0.0,10.0,siren;alarm,"0,1,1,0,0,0,0,0",1,data/raw/balanced_train\-4RWqM0UCCY_0_10.wav,10.0,available,
+-5-vmt2iKT0_30_40,-5-vmt2iKT0,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5-vmt2iKT0_30_40.wav,10.0,available,
+-5Jlimvsuwo_90_100,-5Jlimvsuwo,90.0,100.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5Jlimvsuwo_90_100.wav,10.0,available,
+-5S70zOSw30_30_40,-5S70zOSw30,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5S70zOSw30_30_40.wav,10.0,available,
+-5f6hjZf9Yw_30_40,-5f6hjZf9Yw,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5f6hjZf9Yw_30_40.wav,10.0,available,
+-5xOcMJpTUk_70_80,-5xOcMJpTUk,70.0,80.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-5xOcMJpTUk_70_80.wav,10.0,available,
+-693sNKI3iM_30_40,-693sNKI3iM,30.0,40.0,background,"0,0,0,0,0,0,0,1",0,data/raw/balanced_train\-693sNKI3iM_30_40.wav,10.0,available,

@@ -1,0 +1,180 @@
+import json
+
+notebook = {
+    "cells": [
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "# Audio-Only Emergency Sound Detection Using AudioSet (2017)\n",
+                "## Final Year Design Project (FYDP) — Google Colab GPU Pipeline\n",
+                "\n",
+                "> **Objective:** Train and evaluate an acoustic emergency event detection system on Google AudioSet using GPU acceleration.\n",
+                "> **Ethical Boundary:** Strict audio-only environmental classification. No speech-to-text, keyword spotting, or spoken-word interpretation. Detections raise potential warnings for human verification."
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 1. Environment Setup & Dependency Installation"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Check GPU availability\n",
+                "!nvidia-smi\n",
+                "\n",
+                "# Install required libraries\n",
+                "!pip install -q soundfile yt-dlp imageio-ffmpeg streamlit pytest pyyaml"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 2. Download Official AudioSet Metadata & Filter Classes"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Retrieve official AudioSet ontology and segment lists\n",
+                "!python src/dataset/download_metadata.py\n",
+                "\n",
+                "# Filter for 8 target emergency and background sound classes\n",
+                "!python src/dataset/filter_labels.py --subset --max-per-class 60"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 3. Acquire Audio Clips & Generate Manifests"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Download and slice exact 10s audio segments via yt-dlp & ffmpeg\n",
+                "!python src/dataset/acquire_audio.py --max-clips 80"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 4. Preprocess Audio, Compute Log-Mel Features & Create Leakage-Free Splits"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Group by YouTube Video ID (YTID) to prevent data leakage and extract log-mel features\n",
+                "!python src/dataset/preprocess_audio.py"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 5. Train CompactAudioCNN Model"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Train with positive-weight BCE loss, SpecAugment, and checkpointing\n",
+                "!python src/training/train.py"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 6. Evaluate on Held-Out Test Data & Calibrate Thresholds"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Evaluate on held-out test split and calibrate per-class detection thresholds\n",
+                "!python src/training/evaluate.py"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 7. Real-Time Inference & Edge Latency Benchmark"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "# Benchmark per-window latency, memory, and Real-Time Factor (RTF)\n",
+                "!python benchmark_edge.py"
+            ]
+        },
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [
+                "### 8. Run Unit Tests"
+            ]
+        },
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "!pytest tests/test_pipeline.py -v"
+            ]
+        }
+    ],
+    "metadata": {
+        "accelerator": "GPU",
+        "colab": {
+            "name": "Audio_Only_Emergency_Sound_Detection.ipynb",
+            "provenance": []
+        },
+        "kernelspec": {
+            "display_name": "Python 3",
+            "name": "python3"
+        },
+        "language_info": {
+            "name": "python",
+            "version": "3.10"
+        }
+    },
+    "nbformat": 4,
+    "nbformat_minor": 0
+}
+
+with open(r"d:\ml\fydp\Emergency_Sound_Detection_Colab.ipynb", "w", encoding="utf-8") as f:
+    json.dump(notebook, f, indent=2)
+
+print("Generated Emergency_Sound_Detection_Colab.ipynb successfully.")

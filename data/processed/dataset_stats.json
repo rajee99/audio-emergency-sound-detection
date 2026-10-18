@@ -1,0 +1,26 @@
+{
+  "num_classes": 8,
+  "class_names": [
+    "screaming",
+    "siren",
+    "alarm",
+    "glass_shatter",
+    "smash_crash",
+    "explosion",
+    "gunshot",
+    "background"
+  ],
+  "train_samples": 16,
+  "val_samples": 4,
+  "test_samples": 4,
+  "pos_weights": [
+    1.0,
+    15.0,
+    7.0,
+    1.0,
+    1.0,
+    1.0,
+    15.0,
+    1.0
+  ]
+}
